@@ -312,7 +312,30 @@ TARGET_LINK_LIBRARIES(openMVG_main_evalQuality
   stlplus
   )
 
+###
+# openMVG Sfm gui
+###
+set(CMAKE_AUTOMOC ON)
+
+find_package(PCL 1.2 REQUIRED)
+find_package(Qt5Widgets)
+
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+set(RESOURCE ${CMAKE_CURRENT_LIST_DIR}/omvg_gui.qrc)
+qt5_add_resources(RESOURCE_ADDED ${RESOURCE})
+ADD_EXECUTABLE(ply_preview ply_preview.cpp)
+ADD_EXECUTABLE(omvg_gui main.cpp omvg_gui.cpp omvg_gui.h ${RESOURCE_ADDED})
+TARGET_LINK_LIBRARIES(ply_preview ${PCL_LIBRARIES})
+TARGET_LINK_LIBRARIES(omvg_gui Qt5::Widgets)
+
+set(CMAKE_AUTOMOC OFF)
+
 #installation rules
+SET_PROPERTY(TARGET omvg_gui PROPERTY FOLDER OpenMVG/software)
+INSTALL(TARGETS omvg_gui DESTINATION bin/)
 SET_PROPERTY(TARGET openMVG_main_evalQuality PROPERTY FOLDER OpenMVG/software)
 INSTALL(TARGETS openMVG_main_evalQuality DESTINATION bin/)
 
@@ -325,6 +348,10 @@ IF(MSVC OR APPLE)
 ELSE()
   SET(OPENMVG_SOFTWARE_SFM_BUILD_DIR ${EXECUTABLE_OUTPUT_PATH})
 ENDIF()
+
+SET(OPENMVG_WORKFLOW_IN_FILE "${CMAKE_CURRENT_LIST_DIR}/workflow.py.in")
+CONFIGURE_FILE(${OPENMVG_WORKFLOW_IN_FILE}
+    "${OPENMVG_SOFTWARE_SFM_BUILD_DIR}/workflow.py" @ONLY)
 
 SET(OPENMVG_TUTORIAL_IN_FILE "${CMAKE_CURRENT_LIST_DIR}/tutorial_demo.py.in")
 CONFIGURE_FILE(${OPENMVG_TUTORIAL_IN_FILE}

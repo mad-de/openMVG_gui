@@ -1,0 +1,162 @@
+#!/usr/bin/python
+#! -*- encoding: utf-8 -*-
+
+# A base workflow for OpenMVG
+
+import commands
+import os
+import subprocess
+import sys
+import re
+
+# Define global vars
+
+def get_parent_dir(directory):
+    import os
+    return os.path.dirname(directory)
+
+# Initialize vars
+total_output = "Workflow finished.";
+user_vars = { };
+dict_field = "";
+
+# Fill dictionary with index and field
+for num in sys.argv[1:]:
+ dict_name = re.findall(r'\w+\ ?(?=\=)',num);
+ dict_field = num.replace(dict_name[0] + "=", "")
+ user_vars.update({dict_name[0] : dict_field});
+
+
+# Indicate the openMVG binary directory
+#OPENMVG_SFM_BIN = os.path.dirname(os.path.abspath(__file__))
+OPENMVG_SFM_BIN = "/home/martin/openMVG_build/Linux-x86_64-RELEASE"
+# Indicate the openMVG camera sensor width directory
+#CAMERA_SENSOR_WIDTH_DIRECTORY = os.path.dirname(os.path.abspath(__file__)) + "/cameraSensorWidth"
+CAMERA_SENSOR_WIDTH_DIRECTORY = "/home/martin/openMVG/src/software/SfM" + "/../../openMVG/exif/sensor_width_database"
+camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
+
+if user_vars["step"] == "matching":
+ # Indicate Input dir
+ input_eval_dir = user_vars["inputpath"]
+ # Check if last character is a / and if so cut output dir by 1 and append _out
+ if user_vars["inputpath"].endswith('/'): output_eval_dir = os.path.join(user_vars["inputpath"][:-1] + "_out")
+ else: output_eval_dir = os.path.join(user_vars["inputpath"] + "_out")
+ if not os.path.exists(output_eval_dir):
+  os.mkdir(output_eval_dir)
+
+ input_dir = input_eval_dir
+ output_dir = output_eval_dir
+    
+ matches_dir = os.path.join(output_dir, "matches")
+
+ # Create the ouput/matches folder if not present
+ if not os.path.exists(matches_dir):
+  os.mkdir(matches_dir)
+
+ # -c = 3 = default pinhole camera
+ # 1. Image listing - generate sfm_data.json
+ pIntrisics = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"]] )
+ pIntrisics.wait()
+ # 2. Compute features
+ pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", "SIFT", "-f" , "1"] )
+ pFeatures.wait()
+
+ if os.path.exists(matches_dir+"/sfm_data.json"):
+  print "\n\n************************************************\nMatching complete. Press Next to continue.\n************************************************"
+ else:
+  print "Something went wrong :/";
+
+if user_vars["step"] == "sfm_solver":
+ output_eval_dir = user_vars["inputpath"][:-8]
+ # Incremental sfm solver
+ if user_vars["solver"] == "1":
+  #  3.1 SEQUENTIAL: Compute matches") -r = ratio (0.8 is recommended) -f = force to recompute data every time
+  pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-f", "1"] )
+  pMatches.wait()
+
+  reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
+  # print ("3.2 SEQUENTIAL: Reconstruction") 
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir, "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ] )
+  pRecons.wait()
+
+  # print ("3.3 SEQUENTIAL: Colorize Structure")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")] )
+  pRecons.wait()
+
+  # print ("3.4 SEQUENTIAL: Structure from Known Poses (robust triangulation)")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")] )
+  pRecons.wait()
+
+  # Reconstruction for the global SfM pipeline
+  # - global SfM pipeline use matches filtered by the essential matrices
+  # - g; f: Fundamental matrix filtering e: Essential matrix filtering (all the image must have the same known focal length) h: Homography matrix filtering
+ if user_vars["solver"] == "2":
+  # print ("4.1 GLOBAL: Compute matches")
+  pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"]] )
+  pMatches.wait()
+
+  reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
+  # print ("4.2 GLOBAL: Reconstruction") INVESTIGATE LATER:  "-c", user_vars["camera_model"] doesnt work (Unrecognized option -c)
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir ] )
+  pRecons.wait()
+
+  # print ("4.3 GLOBAL: Colorize Structure")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")] )
+  pRecons.wait()
+
+  # print ("4.4 GLOBAL: Structure from Known Poses (robust triangulation)")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")] )
+  pRecons.wait()
+
+ if os.path.exists(os.path.join(reconstruction_dir,"robust.ply")):
+  print "preview_path " + os.path.join(reconstruction_dir,"robust.ply end_path");
+  print "\n\n************************************************\nMatching complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
+ else:
+  print "Something went wrong :/";
+
+
+# EXPORT 
+
+if user_vars["step"] == "export":
+ if export_pmvs == "false":
+  pass
+ else:
+  print ("4.5 Export global results to PMVS")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
+  total_output += ("\nThe global PMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
+  pRecons.wait()
+
+ if export_cmpmvs == "false":
+  pass
+ else:
+  print ("4.6. Export global results to CMPMVS")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
+  total_output += ("\nThe global CMPMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
+  pRecons.wait()
+
+# SAVE OLD
+
+ # Check if export bools are false, if not export to PMVS and CMPMVS
+
+ if export_pmvs == "false":
+  pass
+ else:
+  print ("3.5. Export Sequential results to PMVS")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
+  total_output += ("\nThe sequential PMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
+  pRecons.wait()
+
+ if export_cmpmvs == "false":
+  pass
+ else:
+  print ("3.6. Export Sequential results to CMPMVS")
+  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
+  total_output += ("\nThe sequential CMPMVS folder was created in the "+reconstruction_dir+"/CMPMVS directory")
+  pRecons.wait()
+
+ print total_output
+ 
+else:
+ pass
+
+
