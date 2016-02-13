@@ -42,45 +42,15 @@ If you want consider this graph visualization feature, please consider to instal
 Linux compilation
 -----------------
 
-Setup the required external library.
-* sudo apt-get install libpng-dev libjpeg-dev libtiff-dev libxxf86vm1 libxxf86vm-dev libxi-dev libxrandr-dev
-If you want see the view graph svg logs
-* sudo apt-get install graphviz
+#Prepare and empty machine for building:
+sudo apt-get update -qq && sudo apt-get install -qq
 
- $ git clone --recursive https://github.com/openMVG/openMVG.git
- $ cd openMVG
- $ ls
-  AUTHORS BUILD  docs  logo  README  src  ...
- $ cd ..
- $ mkdir openMVG_Build
- $ cd openMVG_Build
- $ cmake -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/
-If you want enable unit tests and examples to the build:
- $ cmake -DCMAKE_BUILD_TYPE=RELEASE -DOpenMVG_BUILD_TESTS=ON -DOpenMVG_BUILD_EXAMPLES=ON . ../openMVG/src/
-
-=> In order to use the MOSEK 6 back-end for the linear programming openMVG module
-  - Check that you have an up-to-date MOSEK licence, else openMVG MOSEK unit test will fail.
-
- $ cmake -DCMAKE_BUILD_TYPE=RELEASE
-    -DMOSEK_SEARCH_HEADER="~/Documents/Lib/mosek/6/tools/platform/linux64x86/h"
-    -DMOSEK_SEARCH_LIB="~/Documents/Lib/mosek/6/tools/platform/linux64x86/bin"
-    . ../openMVG/src/
-
-
-If you want have an IDE openable project with codeblocks:
- $ cmake -G "CodeBlocks - Unix Makefiles" -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/
-
-Compile the project
- $ make
-
-For a multi-core compilation (Replace NBcore with the number of threads)
- $ make -j NBcore
-
-Launch test (if asked at cmake step)
- $ make test
-
-Have fun with the samples
- $ cd openMVG_Samples
+sudo apt-get install -y qt5-default libpcl-dev libxxf86vm1 libxxf86vm-dev libxi-dev libxrandr-dev graphviz
+git clone --recursive https://github.com/mad-de/openMVG_gui.git openMVG
+mkdir openMVG_build
+cd openMVG_build
+cmake -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/ -DCMAKE_INSTALL_PREFIX=~/openMVG_build/openMVG_install
+make
 
 -------------------
 Windows compilation
