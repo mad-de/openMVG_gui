@@ -3,26 +3,13 @@ modified build instructions from [cdcseacave](https://github.com/cdcseacave/open
 ```
 #Prepare and empty machine for building:
 sudo apt-get update -qq && sudo apt-get install -qq
-sudo apt-get -y install git subversion cmake libpng-dev libjpeg-dev libtiff-dev libglu1-mesa-dev
+sudo apt-get -y install git subversion cmake libpng-dev libjpeg-dev libtiff-dev libglu1-mesa-dev libeigen3-dev libboost-iostreams-dev libboost-program-options-dev libboost-system-dev libboost-serialization-dev libopencv-dev libcgal-dev libatlas-base-dev libsuitesparse-dev qt5-default libpcl-dev libxxf86vm1 libxxf86vm-dev libxi-dev libxrandr-dev graphviz
 main_path=`pwd`
-
-#Eigen (Required)
-sudo apt-get -y install libeigen3-dev
-
-#Boost (Required)
-sudo apt-get -y install libboost-iostreams-dev libboost-program-options-dev libboost-system-dev libboost-serialization-dev
-
-#OpenCV (Required)
-sudo apt-get -y install libopencv-dev
-
-#CGAL (Required)
-sudo apt-get -y install libcgal-dev
 
 #VCGLib (Required)
 svn checkout svn://svn.code.sf.net/p/vcg/code/trunk/vcglib vcglib
 
 #Ceres (Required)
-sudo apt-get install libatlas-base-dev libsuitesparse-dev
 git clone https://ceres-solver.googlesource.com/ceres-solver ceres-solver
 mkdir ceres_build
 cd ceres_build/
@@ -31,13 +18,13 @@ make
 sudo make install
 cd ..
 
-#OpenMVG (Optional)
-sudo apt-get install -y qt5-default libpcl-dev libxxf86vm1 libxxf86vm-dev libxi-dev libxrandr-dev graphviz
+#OpenMVG
 git clone https://github.com/mad-de/openMVG_gui.git openMVG
 mkdir openMVG_build
 cd openMVG_build
 cmake -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/ -DCMAKE_INSTALL_PREFIX=$main_path/openMVG_build/openMVG_install
 make
+cd ..
 
 #OpenMVS
 git clone https://github.com/cdcseacave/openMVS.git openMVS
