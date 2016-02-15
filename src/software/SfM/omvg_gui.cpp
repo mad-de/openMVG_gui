@@ -932,10 +932,6 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
    
     // Initialize Widgets
 
-    // Set specific widgets
-    InputPath = new QLineEdit(work_dir);
-    btnInputPath = new QPushButton("Select");
-    InputLabel = new QLabel(tr("Image folder:"));
     // Set general widgets
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
@@ -946,33 +942,28 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     command->setStyleSheet("color: #ffffff; background-color: #300a24;");
     command->setEnabled(false);
     command->QWidget::hide();
+    InputPath = new QLineEdit(work_dir);
+    InputPath->QWidget::hide();
+    btnInputPath = new QPushButton("Select");
+    btnInputPath->QWidget::hide();
+    InputLabel = new QLabel(tr("Image folder:"));
+    InputLabel->QWidget::hide();
     btnProcess = new QPushButton("Run");
     TerminalMode = new QCheckBox("Terminal Mode (Expert Users)");
     TerminalMode->QWidget::hide();
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
     input_fields = new QGridLayout;
-    CameraSelLabel = new QLabel("[SfMInit_ImageListing] Camera Model:");
-    CameraSel = new QComboBox;
-    CameraSel->addItem("Pinhole", QVariant(1));
-    CameraSel->addItem("Pinhole radial 1", QVariant(2));
-    CameraSel->addItem("Pinhole radial 3 (default)", QVariant(3));
-    CameraSel->QWidget::hide();
-    CameraSelLabel->QWidget::hide();
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
     registerField("Matching_InputPath", InputPath);
 
-    // Step specific layout
-    input_fields->addWidget(InputLabel, 0, 0);
-    input_fields->addWidget(InputPath, 0, 1);
-    input_fields->addWidget(btnInputPath, 0, 2);
     // General layout
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     input_fields->addWidget(AdvancedOptions, 1, 0, 1, 2);
-    input_fields->addWidget(CameraSelLabel, 2, 0);
-    input_fields->addWidget(CameraSel, 2, 1);
-    CameraSel->setCurrentIndex(2);
+    input_fields->addWidget(InputLabel, 2, 0);
+    input_fields->addWidget(InputPath, 2, 1);
+    input_fields->addWidget(btnInputPath, 2, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     input_fields->addWidget(TerminalMode, 3, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
@@ -992,7 +983,6 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
-    connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MVSSelectorPage::on_CameraSel_changed);
 }
 
 int MVSSelectorPage::nextId() const
@@ -1104,8 +1094,9 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
 	//Show all the Advanced Options
 	command->setEnabled(true);
 	TerminalMode->QWidget::show();
-	CameraSel->QWidget::show();
-	CameraSelLabel->QWidget::show();
+    	InputPath->QWidget::show();
+    	btnInputPath->QWidget::show();
+    	InputLabel->QWidget::show();
     }
     else {
 	// Hide all the Advanced options + command
@@ -1113,8 +1104,9 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
 	TerminalMode->QCheckBox::setChecked(false);
 	command->setEnabled(false);
 	command->QWidget::hide();
-	CameraSel->QWidget::hide();
-	CameraSelLabel->QWidget::hide();
+    	InputPath->QWidget::hide();
+    	btnInputPath->QWidget::hide();
+    	InputLabel->QWidget::hide();
     }
 }
 
@@ -1139,13 +1131,3 @@ void MVSSelectorPage::fldcommandClicked()
     btnProcess->setEnabled(true);
 }
 
-
-// Event: Camera type changed
-void MVSSelectorPage::on_CameraSel_changed()
-{
-    QString get_SelItem = CameraSel->itemData(CameraSel->currentIndex()).toString();
-
-    QString str_commando = command->text();
-    qDebug() << str_commando.replace(QRegExp ("camera_model=([^\"]*)"), "camera_model=" + get_SelItem);
-    command->setText(str_commando);
-}

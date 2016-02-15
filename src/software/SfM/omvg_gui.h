@@ -162,7 +162,6 @@ private slots:
     void btnProcessClicked();
     void btnTerminalModeClicked();
     void fldcommandClicked();
-    void on_CameraSel_changed();
 
 private:
     QLabel *bottomLabel; // !TODO! DELETE?
@@ -178,8 +177,6 @@ private:
     QProcess *process_command;
     QGridLayout *input_fields;
     QPushButton *btnProcess;
-    QLabel *CameraSelLabel;
-    QComboBox *CameraSel;
 };
 
 #endif
