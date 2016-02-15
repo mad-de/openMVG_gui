@@ -39,7 +39,7 @@ if not os.path.exists(user_vars["output_dir"]):
  os.mkdir(user_vars["output_dir"])
 
 # 1. Import
-pMVSImport = subprocess.Popen( [os.path.join(OPENMVS_BIN, "InterfaceOpenMVG"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs")] )
+pMVSImport = subprocess.Popen([os.path.join(OPENMVS_BIN, "InterfaceOpenMVG"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs")])
 pMVSImport.wait()
 
 if os.path.exists(os.path.join(user_vars["output_dir"], "scene.mvs")):

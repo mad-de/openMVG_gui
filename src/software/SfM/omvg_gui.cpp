@@ -623,8 +623,8 @@ void PipelinePage::rightMessage()
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
 	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
 	// Also get paths for export options
-	qDebug() << strdata_qstr_copy.replace(QRegExp (".*mvs_output_path"), "" );
-	qDebug() << strdata_qstr_copy.replace(QRegExp ("end_path.*"), "" );
+	qDebug() << strdata_qstr_copy.replace(QRegExp (".*mvs_output_path "), "" );
+	qDebug() << strdata_qstr_copy.replace(QRegExp (" end_path.*"), "" );
 	OutputPath->setText(strdata_qstr_copy);
     	registerField("Pipeline_OutputPath", OutputPath);
 	txtReport->moveCursor (QTextCursor::End);
