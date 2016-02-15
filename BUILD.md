@@ -40,3 +40,6 @@ sudo make install
 cd ~/openMVG_build/Linux-x86_64-RELEASE
 ./omvg_gui
 ```
+# Extra libs
+* qt5-default 
+* libpcl-dev
