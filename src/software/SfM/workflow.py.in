@@ -110,6 +110,7 @@ if user_vars["step"] == "sfm_solver":
 
  if os.path.exists(os.path.join(reconstruction_dir,"robust.ply")):
   print "preview_path " + os.path.join(reconstruction_dir,"robust.ply end_path");
+  print "mvs_output_path " + os.path.join(reconstruction_dir,"sfm_data.json end_path");
   print "\n\n************************************************\nMatching complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
  else:
   print "Something went wrong :/";

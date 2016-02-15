@@ -7,7 +7,8 @@
 // Initialize paths and filters for later use
 QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 
-QString work_dir = QDir::currentPath() + "/ImageDataset_SceauxCastle/images/";
+QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
+QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 
 QString initialcommandline_matching = "python workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3";
 
@@ -336,6 +337,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     PipelineSel->addItem("Global", QVariant(2));
     InputPath = new QLineEdit("");
     InputPath->QWidget::hide();
+    OutputPath = new QLineEdit("");
+    OutputPath->QWidget::hide();
     btnInputPath = new QPushButton("Select");
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("Matches Path:"));
@@ -410,7 +413,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     advanced_options = new QGridLayout;   
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
-    registerField("Pipeline_InputPath", InputPath);
+    registerField("Pipeline_OutputPath", OutputPath);
     StatusPipelinePage = new QLineEdit("init");
     registerField("PipelinePage_status", StatusPipelinePage);
     preview_pipeline = new QLineEdit;
@@ -498,8 +501,11 @@ void PipelinePage::showEvent(QShowEvent*)
     QString input_dir_path = field("Matching_InputPath").toString();
     QString output_dir = input_dir_path.mid(0, input_dir_path.length()-1) + "_out/";
     QString json_dir = output_dir + "matches/";
+    QString mvs_dir = output_dir + "reconstruction_global/";
     InputPath->setText(json_dir);
+    OutputPath->setText(mvs_dir);
     ImagesFolderPath->setText(input_dir_path);
+
 
     QString str_commando;
     str_commando = command->text();
@@ -510,17 +516,6 @@ void PipelinePage::showEvent(QShowEvent*)
 
     // Do we need the cancel button here? I don't think so...
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
-
-    // Have we been here before? Set the buttons accordingly 
-    // TODO: Doesn't work - investigate later
-    if(field("PipelinePage_status").toString() == "finished") {
-	wizard()->button(QWizard::NextButton)->setText("Next >");
-	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
-    }
-    else {
-    	wizard()->button(QWizard::NextButton)->setText("Skip >");
-	wizard()->button(QWizard::CustomButton1)->setEnabled(false);
-    }	
 }
 
 // Event: Select Input path
@@ -618,6 +613,16 @@ void PipelinePage::rightMessage()
 	preview_pipeline->setText(strdata_qstr);
 	registerField("Preview_Pipeline", preview_pipeline);
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
+	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (strdata_qstr_output);
+	txtReport->moveCursor (QTextCursor::End);
+    }
+    else if (strdata.contains("mvs_output_path")) {
+	qDebug() << strdata_qstr.replace(QRegExp (".*mvs_output_path"), "" );
+	qDebug() << strdata_qstr.replace(QRegExp ("end_path.*"), "" );
+	OutputPath->setText(strdata_qstr);
+    	registerField("Pipeline_OutputPath", OutputPath);
 	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
 	txtReport->moveCursor (QTextCursor::End);
 	txtReport->insertPlainText (strdata_qstr_output);
@@ -946,7 +951,7 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     InputPath->QWidget::hide();
     btnInputPath = new QPushButton("Select");
     btnInputPath->QWidget::hide();
-    InputLabel = new QLabel(tr("Image folder:"));
+    InputLabel = new QLabel(tr("sfm_data.json Folder:"));
     InputLabel->QWidget::hide();
     btnProcess = new QPushButton("Run");
     TerminalMode = new QCheckBox("Terminal Mode (Expert Users)");
@@ -954,9 +959,6 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
     input_fields = new QGridLayout;
-
-    // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
-    registerField("Matching_InputPath", InputPath);
 
     // General layout
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
@@ -994,8 +996,9 @@ int MVSSelectorPage::nextId() const
 // When Initializing page (use Show event instead of initialize page) set Text to "Skip" or "Next"
 void MVSSelectorPage::showEvent(QShowEvent*)
 {
+    InputPath->setText(field("Pipeline_OutputPath").toString());
     // Have we been here before? Set the buttons accordingly
-    if(field("Matching_finished").toString() == "false") {
+    if(field("MVS_finished").toString() == "false") {
 	wizard()->button(QWizard::NextButton)->setText("Next >");
     }
     else {
@@ -1032,7 +1035,7 @@ void MVSSelectorPage::btnInputPathClicked()
     command->setText(str_commando);
 
     // Have we been here before? Enable re-running
-    if(field("Matching_finished").toString() == "false") {
+    if(field("MVS_finished").toString() == "false") {
 	btnProcess->setText("Run");
 	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(true);
@@ -1069,7 +1072,7 @@ void MVSSelectorPage::rightMessage()
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Next >");
     btnProcess->setText("Finished");
-    registerField("Matching_finished", btnProcess);
+    registerField("MVS_finished", btnProcess);
     }
 }
 

@@ -102,6 +102,7 @@ private:
     QLabel *bottomLabel; // !TODO! DELETE?
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
+    QLineEdit *OutputPath;
     QLineEdit *ImagesFolderPath;
     QPushButton *btnImagesFolderPath;
     QLabel *ImagesFolderLabel;
