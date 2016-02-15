@@ -501,11 +501,7 @@ void PipelinePage::showEvent(QShowEvent*)
     QString input_dir_path = field("Matching_InputPath").toString();
     QString output_dir = input_dir_path.mid(0, input_dir_path.length()-1) + "_out/";
     QString json_dir = output_dir + "matches/";
-    QString mvs_dir = output_dir + "reconstruction_global/";
-    InputPath->setText(json_dir);
-    OutputPath->setText(mvs_dir);
-    ImagesFolderPath->setText(input_dir_path);
-
+    QString mvs_dir = output_dir + "reconstruction_sequential/";
 
     QString str_commando;
     str_commando = command->text();
@@ -516,6 +512,15 @@ void PipelinePage::showEvent(QShowEvent*)
 
     // Do we need the cancel button here? I don't think so...
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
+
+    // Have we been here before?
+    if (field("PipelinePage_status").toString() == "init") {
+    InputPath->setText(json_dir);
+    OutputPath->setText(mvs_dir);
+    ImagesFolderPath->setText(input_dir_path);
+    StatusPipelinePage->setText("visited");
+    registerField("PipelinePage_status", StatusPipelinePage);
+    }
 }
 
 // Event: Select Input path
@@ -605,6 +610,7 @@ void PipelinePage::rightMessage()
 {
     QByteArray strdata = process_command->readAllStandardOutput();
     QString strdata_qstr = strdata;
+    QString strdata_qstr_copy = strdata;
     QString strdata_qstr_output = strdata;
     // When triggered, get the preview_path output, enable Preview button, don't show
     if (strdata.contains("preview_path")) {
@@ -614,16 +620,11 @@ void PipelinePage::rightMessage()
 	registerField("Preview_Pipeline", preview_pipeline);
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
 	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
-	txtReport->moveCursor (QTextCursor::End);
-	txtReport->insertPlainText (strdata_qstr_output);
-	txtReport->moveCursor (QTextCursor::End);
-    }
-    else if (strdata.contains("mvs_output_path")) {
-	qDebug() << strdata_qstr.replace(QRegExp (".*mvs_output_path"), "" );
-	qDebug() << strdata_qstr.replace(QRegExp ("end_path.*"), "" );
-	OutputPath->setText(strdata_qstr);
+	// Also get paths for export options
+	qDebug() << strdata_qstr_copy.replace(QRegExp (".*mvs_output_path"), "" );
+	qDebug() << strdata_qstr_copy.replace(QRegExp ("end_path.*"), "" );
+	OutputPath->setText(strdata_qstr_copy);
     	registerField("Pipeline_OutputPath", OutputPath);
-	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
 	txtReport->moveCursor (QTextCursor::End);
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
