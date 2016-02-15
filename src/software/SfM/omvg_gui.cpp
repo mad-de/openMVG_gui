@@ -14,6 +14,8 @@ QString initialcommandline_matching = "python workflow.py step=\"matching\" inpu
 
 QString initialcommandline_sfm_solver = "python workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3";
 
+QString initialcommandline_mvs_selector = "python workflow_openMVS.py mvs=\"matching\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\"";
+
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
 
@@ -939,12 +941,16 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     // Initialize Widgets
 
     // Set general widgets
+    MVSSelLabel = new QLabel(tr("Select MVS solver:"));
+    MVSSel = new QComboBox;
+    MVSSel->addItem("openMVS (Standard)", QVariant(1));
+    MVSSel->addItem("CMPMVS", QVariant(2));
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
     AdvancedOptions = new QCheckBox("Advanced Options");
     command = new QLineEdit("init");
-    command = new QLineEdit(initialcommandline_matching);
+    command = new QLineEdit(initialcommandline_mvs_selector);
     command->setStyleSheet("color: #ffffff; background-color: #300a24;");
     command->setEnabled(false);
     command->QWidget::hide();
@@ -962,6 +968,8 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     input_fields = new QGridLayout;
 
     // General layout
+    input_fields->addWidget(MVSSelLabel, 0 , 0);
+    input_fields->addWidget(MVSSel, 0 , 1);
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     input_fields->addWidget(AdvancedOptions, 1, 0, 1, 2);
     input_fields->addWidget(InputLabel, 2, 0);
@@ -986,6 +994,7 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
+    connect(MVSSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MVSSelectorPage::on_MVSSel_changed);
 }
 
 int MVSSelectorPage::nextId() const
@@ -1005,6 +1014,16 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     else {
     wizard()->button(QWizard::NextButton)->setText("Skip >");
     }	
+    
+    // set inputpath + outputpath accordingly
+    QString str_commando;
+    str_commando = command->text();
+    QString str(str_commando); 
+    qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + field("Pipeline_OutputPath").toString() + "\"");
+    QString input_path_cut = field("Pipeline_OutputPath").toString().mid(0,  field("Pipeline_OutputPath").toString().length()-1);
+    QString output_dir = input_path_cut.mid(0, input_path_cut.lastIndexOf("/")) + "/MVS_out/";
+    qDebug() << str_commando.replace(QRegExp ("output_dir=\"([^\"]*)\""), "output_dir=\"" + output_dir + "\"");
+    command->setText(str_commando);
 
     // Do we need the cancel button here? I don't think so...
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
@@ -1133,5 +1152,68 @@ void MVSSelectorPage::fldcommandClicked()
     btnProcess->setText("Run");
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
+}
+
+// Event: Pipeline Selector changed
+void MVSSelectorPage::on_MVSSel_changed()
+{
+    QString get_SelItem = MVSSel->itemData(MVSSel->currentIndex()).toString();
+
+    QString str_commando = command->text();
+
+    qDebug() << str_commando.replace(QRegExp ("mvs=\"([^\"]*)\""), "mvs=\"" + get_SelItem + "\"");
+    
+/*
+    // Dirty: hide non-affected options, show affected
+    if(get_SelItem == "2")
+    {
+	// Show Matrix selector, hide Imagesfolder
+	if(AdvancedOptions->checkState() == Qt::Checked)
+	{
+	    MatrixSel->QWidget::show();
+	    MatrixSelLabel->QWidget::show();
+	    ImagesFolderLabel->QWidget::hide();
+	    ImagesFolderPath->QWidget::hide();
+	    btnImagesFolderPath->QWidget::hide();
+	    CameraSel->QWidget::hide();
+   	    CameraSelLabel->QWidget::hide();
+	}
+	    solverImage1->QWidget::hide();
+	    solverImage1Button->QWidget::hide();
+	    solverImage1Label->QWidget::hide();
+	    solverImage2->QWidget::hide();
+	    solverImage2Button->QWidget::hide();
+	    solverImage2Label->QWidget::hide();
+            image_selector_grid_descr->QWidget::hide();
+    }
+
+    // Dirty: show non-affected options
+    if(get_SelItem == "1")
+    {
+	// Hide Matrix selector + show Images
+	if(AdvancedOptions->checkState() == Qt::Checked)
+	{
+	    MatrixSel->QWidget::hide();
+	    MatrixSelLabel->QWidget::hide();
+	    ImagesFolderLabel->QWidget::show();
+	    ImagesFolderPath->QWidget::show();
+	    btnImagesFolderPath->QWidget::show();
+	    CameraSel->QWidget::show();
+   	    CameraSelLabel->QWidget::show();
+	}
+	solverImage1->QWidget::show();
+	solverImage1Button->QWidget::show();
+	solverImage1Label->QWidget::show();
+	solverImage2->QWidget::show();
+	solverImage2Button->QWidget::show();
+	solverImage2Label->QWidget::show();
+        image_selector_grid_descr->QWidget::show();
+    }
+    command->setText(str_commando);
+
+    enable_run_again();
+*/
+
+    command->setText(str_commando);
 }
 

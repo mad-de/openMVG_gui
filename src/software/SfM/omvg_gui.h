@@ -163,12 +163,15 @@ private slots:
     void btnProcessClicked();
     void btnTerminalModeClicked();
     void fldcommandClicked();
+    void on_MVSSel_changed();
 
 private:
     QLabel *bottomLabel; // !TODO! DELETE?
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
     QTextEdit *commandline; // !TODO! DOESNT EXIST - DELETE?
+    QLabel *MVSSelLabel;
+    QComboBox *MVSSel;
     QCheckBox *AdvancedOptions;
     QCheckBox *TerminalMode;
     QTextEdit *txtReport;
