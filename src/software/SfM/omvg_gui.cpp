@@ -14,7 +14,7 @@ QString initialcommandline_matching = "python workflow.py step=\"matching\" inpu
 
 QString initialcommandline_sfm_solver = "python workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3";
 
-QString initialcommandline_mvs_selector = "python workflow_openMVS.py mvs=\"matching\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
+QString initialcommandline_mvs_selector = "python workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
@@ -514,7 +514,7 @@ void PipelinePage::showEvent(QShowEvent*)
     QString input_dir_path = field("Matching_InputPath").toString();
     QString output_dir = input_dir_path.mid(0, input_dir_path.length()-1) + "_out/";
     QString json_dir = output_dir + "matches/";
-    QString mvs_dir = output_dir + "reconstruction_sequential/";
+    QString mvs_dir = output_dir + "reconstruction_global/";
 
     QString str_commando;
     str_commando = command->text();
@@ -962,7 +962,10 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     MVSSelLabel = new QLabel(tr("Select MVS solver / Export format:"));
     MVSSel = new QComboBox;
     MVSSel->addItem("openMVS (Standard)", QVariant(1));
-    MVSSel->addItem("CMPMVS", QVariant(2));
+    MVSSel->addItem("PMVS", QVariant(2));
+    MVSSel->addItem("CMVS", QVariant(3));
+    MVSSel->addItem("CMPMVS (Export only)", QVariant(4));
+    MVSSel->addItem("MVE (Export only)", QVariant(5));
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
@@ -1224,17 +1227,24 @@ void MVSSelectorPage::fldcommandClicked()
     btnProcess->setEnabled(true);
 }
 
-// Event: Pipeline Selector changed
+// Event: Selector changed
 void MVSSelectorPage::on_MVSSel_changed()
 {
     QString get_SelItem = MVSSel->itemData(MVSSel->currentIndex()).toString();
 
     QString str_commando = command->text();
 
-    qDebug() << str_commando.replace(QRegExp ("mvs=\"([^\"]*)\""), "mvs=\"" + get_SelItem + "\"");
-    
+    if(get_SelItem == "1")
+    {
+	// Hide Matrix selector + show Images
+	if(AdvancedOptions->checkState() == Qt::Checked)
+	{
+   	    UseDensify->QWidget::show();
+   	    UseRefine->QWidget::show();
+	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"openMVS\"");
+	}
+    }
 
-    // Dirty: hide non-affected options, show affected
     if(get_SelItem == "2")
     {
 	// Show Matrix selector, hide Imagesfolder
@@ -1243,21 +1253,9 @@ void MVSSelectorPage::on_MVSSel_changed()
    	    UseDensify->QWidget::hide();
    	    UseRefine->QWidget::hide();
 	}
-    }
-
-    // Dirty: show non-affected options
-    if(get_SelItem == "1")
-    {
-	// Hide Matrix selector + show Images
-	if(AdvancedOptions->checkState() == Qt::Checked)
-	{
-   	    UseDensify->QWidget::show();
-   	    UseRefine->QWidget::show();
-	}
+	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"pmvs\"");
     }
 // TODO:    enable_run_again();
-
-
     command->setText(str_commando);
 }
 

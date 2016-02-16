@@ -26,10 +26,10 @@ for num in sys.argv[1:]:
  dict_field = num.replace(dict_name[0] + "=", "")
  user_vars.update({dict_name[0] : dict_field});
 
-
 # Indicate the openMVG binary directory
 OPENMVG_SFM_BIN = "@OPENMVG_SOFTWARE_SFM_BUILD_DIR@"
 OPENMVG_PMVS_BIN = "@OPNENMVG_PMVS_BIN_PATH@"
+OPENMVS_BIN = os.path.join(os.path.expanduser('~'), "openMVS_build/bin")
 # Indicate the openMVG camera sensor width directory
 CAMERA_SENSOR_WIDTH_DIRECTORY = "@OPENMVG_SOFTWARE_SFM_SRC_DIR@" + "/../../openMVG/exif/sensor_width_database"
 camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
@@ -65,7 +65,7 @@ if user_vars["step"] == "matching":
  else:
   print "Something went wrong :/";
 
-if user_vars["step"] == "sfm_solver":
+elif user_vars["step"] == "sfm_solver":
  output_eval_dir = user_vars["inputpath"][:-8]
  # Incremental sfm solver
  if user_vars["solver"] == "1":
@@ -114,49 +114,109 @@ if user_vars["step"] == "sfm_solver":
  else:
   print "Something went wrong :/";
 
+elif user_vars["step"] == "pmvs":
+ pPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
+ pPMVS.wait()
 
-# EXPORT 
+ # Check if openMVS path exists - if not terminate
+ if not os.path.exists(OPENMVG_PMVS_BIN):
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPNENMVG_PMVS_PATH=\" variable.");
+ else: 
 
-if user_vars["step"] == "export":
- if export_pmvs == "false":
-  pass
- else:
-  print ("4.5 Export global results to PMVS")
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
-  total_output += ("\nThe global PMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
-  pRecons.wait()
+  pPMVS2 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "pmvs_options.txt"] )
+  pPMVS2.wait()
+  if os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply")):
+   print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply end_path");
+   print "\n\n************************************************\nRunning PMVS complete.\nOutput folder: " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply") + ".\nPress Finish to close program or check out the Preview.\n************************************************"
+  else:
+   sys.stderr.write("An error occured during running PMVS. The process halted.");
 
- if export_cmpmvs == "false":
-  pass
- else:
-  print ("4.6. Export global results to CMPMVS")
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
-  total_output += ("\nThe global CMPMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
-  pRecons.wait()
 
-# SAVE OLD
+#./pmvs /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ pmvs_options.txt
 
- # Check if export bools are false, if not export to PMVS and CMPMVS
+#./cmvs /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ [MaxImageCountByCluster=100]
+#./cmvs /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ 30
+#./genOption /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/
+#./pmvs2 /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ option-0000
 
- if export_pmvs == "false":
-  pass
- else:
-  print ("3.5. Export Sequential results to PMVS")
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
-  total_output += ("\nThe sequential PMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
-  pRecons.wait()
-
- if export_cmpmvs == "false":
-  pass
- else:
-  print ("3.6. Export Sequential results to CMPMVS")
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
-  total_output += ("\nThe sequential CMPMVS folder was created in the "+reconstruction_dir+"/CMPMVS directory")
-  pRecons.wait()
-
- print total_output
+elif user_vars["step"] == "cmpmvs":
+ print ("4.6. Export global results to CMPMVS")
+ pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
+ total_output += ("\nThe global CMPMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
+ pRecons.wait()
  
+elif user_vars["step"] == "openMVS":
+ # Check if openMVS path exists - if not terminate
+ if not os.path.exists(OPENMVS_BIN):
+  sys.stderr.write("The OpenMVS binary files couldn't be found. Please check if openMVS is installed correctly in the /openMVS_build/bin folder.");
+ else:  
+  # Check if necessary vars are set
+  if not "use_densify" in user_vars:
+   user_vars["use_densify"] = "OFF";
+
+  if not "use_refine" in user_vars:
+   user_vars["use_refine"] = "OFF";
+
+  if not os.path.exists(user_vars["output_dir"]):
+   os.mkdir(user_vars["output_dir"])
+
+  # 1. Import
+  pMVSImport = subprocess.Popen([os.path.join(OPENMVS_BIN, "InterfaceOpenMVG"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs")])
+  pMVSImport.wait()
+
+  if os.path.exists(os.path.join(user_vars["output_dir"], "scene.mvs")):
+   still_working = 1;
+  else:
+    sys.stderr.write("An error occured during Import. The MVS process halted.");
+    still_working = 0;
+
+  # 2. Densify Point Cloud (optional)
+  if still_working == 1 and user_vars["use_densify"] == "ON":
+   pMVSDensify = subprocess.Popen( [os.path.join(OPENMVS_BIN, "DensifyPointCloud"),  "-i", os.path.join(user_vars["output_dir"], "scene.mvs"), "-o", os.path.join(user_vars["output_dir"], "scene_dense.mvs")] )
+   pMVSDensify.wait()
+
+   if not os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense.mvs")):
+    sys.stderr.write("An error occured during Densify. The MVS process halted.");
+    still_working = 0;
+
+  # 3. Reconstruct Meshes
+  if user_vars["use_densify"] == "ON":
+   this_input_file = "scene_dense.mvs";
+  else:
+   this_input_file = "scene.mvs";
+
+  if still_working == 1:
+   pMVSReconstruct = subprocess.Popen( [os.path.join(OPENMVS_BIN, "ReconstructMesh"),  "-i", os.path.join(user_vars["output_dir"], this_input_file), "-o", os.path.join(user_vars["output_dir"], "scene_mesh.mvs")] )
+   pMVSReconstruct.wait()
+
+   if not os.path.exists(os.path.join(user_vars["output_dir"], "scene_mesh.mvs")):
+    sys.stderr.write("An error occured during Reconstruct. The MVS process halted.");
+    still_working = 0;
+
+  # 4. Refine Meshes (optional)
+  if still_working == 1 and user_vars["use_refine"] == "ON":
+   pMVSRefine = subprocess.Popen( [os.path.join(OPENMVS_BIN, "RefineMesh"),  "-i", os.path.join(user_vars["output_dir"], "scene_mesh.mvs"), "-o", os.path.join(user_vars["output_dir"], "scene_dense_mesh.mvs")] )
+   pMVSRefine.wait()
+
+   if not os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh.mvs")):
+    sys.stderr.write("An error occured during Refine. The MVS process halted.");
+    still_working = 0;
+
+  # 5. Texture Meshes
+  if user_vars["use_refine"] == "ON":
+   this_input_file = "scene_dense_mesh.mvs";
+  else:
+   this_input_file = "scene_mesh.mvs";
+
+  if still_working == 1:
+   pMVSRefine = subprocess.Popen( [os.path.join(OPENMVS_BIN, "TextureMesh"),  "-i", os.path.join(user_vars["output_dir"], this_input_file), "-o", os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")] )
+   pMVSRefine.wait()
+
+   if os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")):
+    print "preview_path " + os.path.join(user_vars["output_dir"],"scene_dense_mesh_texture.ply end_path");
+    print "\n\n************************************************\nRunning openMVS complete.\nOutput folder: " + user_vars["output_dir"] + ".\nPress Finish to close program or check out the Preview.\n************************************************"
+   else:
+    sys.stderr.write("An error occured during Texturing. The MVS process halted.");
+
 else:
  pass
-
-
