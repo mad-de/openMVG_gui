@@ -470,9 +470,9 @@ PipelinePage::PipelinePage(QWidget *parent)
     advanced_options->addWidget(MatrixSel, 1, 1);
 
     terminal_fields->addWidget(CommandLabel, 0, 0);  
-    terminal_fields->addWidget(btnProcess, 0, 6);
+    terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    terminal_fields->addWidget(txtReport, 1, 0, 1, 7);
+    terminal_fields->addWidget(txtReport, 1, 0, 1, 9);
 
     // Insert into main Layout
     main_grid->addLayout(input_fields, 0, 0);
@@ -526,7 +526,7 @@ void PipelinePage::showEvent(QShowEvent*)
     // Do we need the cancel button here? I don't think so...
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
 
-    // Have we been here before?
+    // Have we been here before? Set the paths accordingly
     if (field("PipelinePage_status").toString() == "init") {
     InputPath->setText(json_dir);
     OutputPath->setText(mvs_dir);
@@ -534,6 +534,13 @@ void PipelinePage::showEvent(QShowEvent*)
     StatusPipelinePage->setText("visited");
     registerField("PipelinePage_status", StatusPipelinePage);
     }
+    // Have we finished here before? Set the buttons accordingly
+    if(field("PipelinePage_status").toString() == "finished") {
+	wizard()->button(QWizard::NextButton)->setText("Next >");
+    }
+    else {
+    wizard()->button(QWizard::NextButton)->setText("Skip >");
+    }	
 }
 
 // Event: Select Input path
@@ -1005,9 +1012,9 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
     advanced_options->addWidget(command, 6, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
-    terminal_fields->addWidget(btnProcess, 0, 6);
+    terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    terminal_fields->addWidget(txtReport, 1, 0, 1, 7);
+    terminal_fields->addWidget(txtReport, 1, 0, 1, 9);
 
     // Insert into main Layout
     main_grid->addLayout(input_fields, 0, 0);

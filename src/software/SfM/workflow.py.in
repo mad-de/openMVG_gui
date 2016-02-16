@@ -28,11 +28,10 @@ for num in sys.argv[1:]:
 
 
 # Indicate the openMVG binary directory
-#OPENMVG_SFM_BIN = os.path.dirname(os.path.abspath(__file__))
-OPENMVG_SFM_BIN = "/home/martin/openMVG_build/Linux-x86_64-RELEASE"
+OPENMVG_SFM_BIN = "@OPENMVG_SOFTWARE_SFM_BUILD_DIR@"
+OPENMVG_PMVS_BIN = "@OPNENMVG_PMVS_BIN_PATH@"
 # Indicate the openMVG camera sensor width directory
-#CAMERA_SENSOR_WIDTH_DIRECTORY = os.path.dirname(os.path.abspath(__file__)) + "/cameraSensorWidth"
-CAMERA_SENSOR_WIDTH_DIRECTORY = "/home/martin/openMVG/src/software/SfM" + "/../../openMVG/exif/sensor_width_database"
+CAMERA_SENSOR_WIDTH_DIRECTORY = "@OPENMVG_SOFTWARE_SFM_SRC_DIR@" + "/../../openMVG/exif/sensor_width_database"
 camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
 
 if user_vars["step"] == "matching":

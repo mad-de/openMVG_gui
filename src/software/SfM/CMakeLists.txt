@@ -1,4 +1,3 @@
-
 ###
 # Intrinsic image analysis and SfM_Data container initialization
 ###
@@ -340,8 +339,15 @@ SET_PROPERTY(TARGET openMVG_main_evalQuality PROPERTY FOLDER OpenMVG/software)
 INSTALL(TARGETS openMVG_main_evalQuality DESTINATION bin/)
 
 ##
+# Catch a string from CMAKE
+#
+
+SET(OPNENMVG_PMVS_PATH "/usr/lib/PMVS/" CACHE STRING "Path to your PMVS binary folder")
+SET(OPNENMVG_PMVS_BIN_PATH "${OPNENMVG_PMVS_PATH}/main")
+##
 # Export tutorial with valid path thanks to a configuration file
 ##
+
 SET(OPENMVG_SOFTWARE_SFM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
 IF(MSVC OR APPLE)
   SET(OPENMVG_SOFTWARE_SFM_BUILD_DIR "${EXECUTABLE_OUTPUT_PATH}/${CMAKE_BUILD_TYPE}")
