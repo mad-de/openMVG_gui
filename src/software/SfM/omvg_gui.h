@@ -164,6 +164,8 @@ private slots:
     void btnTerminalModeClicked();
     void fldcommandClicked();
     void on_MVSSel_changed();
+    void btnUseDensifyClicked();
+    void btnUseRefineClicked();
 
 private:
     QLabel *bottomLabel; // !TODO! DELETE?
@@ -179,8 +181,14 @@ private:
     QLabel *InputLabel;
     QLabel *CommandLabel;
     QProcess *process_command;
+    QGridLayout *main_grid;
+    QGridLayout *advanced_options;
     QGridLayout *input_fields;
+    QGridLayout *terminal_fields;
     QPushButton *btnProcess;
+    QCheckBox *UseRefine;
+    QCheckBox *UseDensify;
+    QLineEdit *preview_mvs;
 };
 
 #endif

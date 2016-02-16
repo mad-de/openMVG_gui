@@ -80,10 +80,13 @@ void OMVGguiWizard::showPreview()
     case Page_Pipeline:
         preview_file = field("Preview_Pipeline").toString();
         break;
+    case Page_MVSSelector:
+        preview_file = field("Preview_MVS").toString();
+        break;
     default:
         preview_file = field("Preview_Pipeline").toString();
     }
-    QString preview_commandline = "./ply_preview " + preview_file + preview_file;
+    QString preview_commandline = "./ply_preview " + preview_file + " " + preview_file;
 
     process_preview = new QProcess();
     process_preview->start("/bin/bash", QStringList() << "-c" << QString(preview_commandline));
@@ -352,6 +355,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     ImagesFolderLabel = new QLabel(tr("Image Folder:"));
     ImagesFolderLabel->QWidget::hide();
     image_selector_grid_descr = new QLabel("[IncrementalSfM] Select Images with best matches to begin matching:");
+    image_selector_grid_descr->QWidget::hide();
     ratioLabel = new QLabel("Ratio:");
     ratioLabel->QWidget::hide();
     sliderRatio = new QSlider(Qt::Horizontal);
@@ -377,11 +381,17 @@ PipelinePage::PipelinePage(QWidget *parent)
     CameraSelLabel->QWidget::hide();
     // Incremental-specific
     solverImage1 = new QLineEdit("");
+    solverImage1->QWidget::hide();
     solverImage1Label = new QLabel("Image 1:");
+    solverImage1Label->QWidget::hide();
     solverImage1Button = new QPushButton("Select");
+    solverImage1Button->QWidget::hide();
     solverImage2 = new QLineEdit("");
+    solverImage2->QWidget::hide();
     solverImage2Label = new QLabel("Image 2:");
+    solverImage2Label->QWidget::hide();
     solverImage2Button = new QPushButton("Select");
+    solverImage2Button->QWidget::hide();
     // Global-specific
     MatrixSelLabel = new QLabel("[GLOBAL] Matrix Filtering:");
     MatrixSel = new QComboBox;
@@ -424,6 +434,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Step specific layout
     input_fields->addWidget(PipelineSelLabel, 0 , 0);
     input_fields->addWidget(PipelineSel, 0 , 1);
+    PipelineSel->setCurrentIndex(1);
 
     // Image Selector
     image_selector_grid_descr->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
@@ -616,8 +627,8 @@ void PipelinePage::rightMessage()
     QString strdata_qstr_output = strdata;
     // When triggered, get the preview_path output, enable Preview button, don't show
     if (strdata.contains("preview_path")) {
-	qDebug() << strdata_qstr.replace(QRegExp (".*preview_path"), "" );
-	qDebug() << strdata_qstr.replace(QRegExp ("end_path.*"), "" );
+	qDebug() << strdata_qstr.replace(QRegExp (".*preview_path "), "" );
+	qDebug() << strdata_qstr.replace(QRegExp (" end_path.*"), "" );
 	preview_pipeline->setText(strdata_qstr);
 	registerField("Preview_Pipeline", preview_pipeline);
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
@@ -935,13 +946,13 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     : QWizardPage(parent)
 {
     // Set page title and content
-    setTitle(tr("Step 3: Select Multi-View Stereovision workflow"));
-    setSubTitle(tr("Please select the Stereovision protocol to use press \"Run\""));
+    setTitle(tr("Step 3: Select Multi-View Stereovision workflow / Export format"));
+    setSubTitle(tr("Please select the options of your choice and press \"Run\""));
    
     // Initialize Widgets
 
     // Set general widgets
-    MVSSelLabel = new QLabel(tr("Select MVS solver:"));
+    MVSSelLabel = new QLabel(tr("Select MVS solver / Export format:"));
     MVSSel = new QComboBox;
     MVSSel->addItem("openMVS (Standard)", QVariant(1));
     MVSSel->addItem("CMPMVS", QVariant(2));
@@ -965,28 +976,46 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     TerminalMode->QWidget::hide();
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
+    UseDensify = new QCheckBox("[openmVS] Densify Point Cloud");
+    UseDensify->QWidget::hide();
+    UseDensify->QAbstractButton::setChecked(true);
+    UseRefine = new QCheckBox("[openmVS] Refine Mesh");
+    UseRefine->QWidget::hide();
+    UseRefine->QAbstractButton::setChecked(true);
+    preview_mvs = new QLineEdit();
     input_fields = new QGridLayout;
+    advanced_options = new QGridLayout;
+    terminal_fields = new QGridLayout;
+    main_grid = new QGridLayout;
 
     // General layout
     input_fields->addWidget(MVSSelLabel, 0 , 0);
     input_fields->addWidget(MVSSel, 0 , 1);
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    input_fields->addWidget(AdvancedOptions, 1, 0, 1, 2);
-    input_fields->addWidget(InputLabel, 2, 0);
-    input_fields->addWidget(InputPath, 2, 1);
-    input_fields->addWidget(btnInputPath, 2, 2);
+    advanced_options->addWidget(AdvancedOptions, 1, 0, 1, 2);
+    UseDensify->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(UseDensify, 2, 0, 1, 2);
+    UseRefine->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(UseRefine, 3, 0, 1, 2);
+    advanced_options->addWidget(InputLabel, 4, 0);
+    advanced_options->addWidget(InputPath, 4, 1);
+    advanced_options->addWidget(btnInputPath, 4, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    input_fields->addWidget(TerminalMode, 3, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 5, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    input_fields->addWidget(command, 4, 0, 1, 3);
-    input_fields->addWidget(CommandLabel, 5, 0);    
-    input_fields->addWidget(btnProcess, 5, 2);
+    advanced_options->addWidget(command, 6, 0, 1, 3);
+    terminal_fields->addWidget(CommandLabel, 0, 0);  
+    terminal_fields->addWidget(btnProcess, 0, 6);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    input_fields->addWidget(txtReport, 6, 0, 1, 3);
+    terminal_fields->addWidget(txtReport, 1, 0, 1, 7);
+
+    // Insert into main Layout
+    main_grid->addLayout(input_fields, 0, 0);
+    main_grid->addLayout(advanced_options, 2, 0);
+    main_grid->addLayout(terminal_fields, 3, 0);
 
     // Finalize
-    setLayout(input_fields);
-    input_fields->setAlignment(Qt::AlignBottom);
+    setLayout(main_grid);
 
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
@@ -995,6 +1024,8 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
     connect(MVSSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MVSSelectorPage::on_MVSSel_changed);
+    connect(UseDensify,SIGNAL(clicked()),this,SLOT(btnUseDensifyClicked()));
+    connect(UseRefine,SIGNAL(clicked()),this,SLOT(btnUseRefineClicked()));
 }
 
 int MVSSelectorPage::nextId() const
@@ -1085,14 +1116,27 @@ void MVSSelectorPage::btnProcessClicked()
 void MVSSelectorPage::rightMessage()
 {
     QByteArray strdata = process_command->readAllStandardOutput();
+    QString strdata_qstr = strdata;
+    QString strdata_qstr_output = strdata;
+    if (strdata.contains("preview_path")) {
+	qDebug() << strdata_qstr.replace(QRegExp (".*preview_path"), "" );
+	qDebug() << strdata_qstr.replace(QRegExp ("end_path.*"), "" );
+	preview_mvs->setText(strdata_qstr);
+	registerField("Preview_MVS", preview_mvs);
+	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
+	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (strdata_qstr_output);
+	txtReport->moveCursor (QTextCursor::End);
+    }
     txtReport->moveCursor (QTextCursor::End);
     txtReport->insertPlainText (strdata);
     txtReport->moveCursor (QTextCursor::End);
     if (strdata.contains("Press Next to continue")) {
-    wizard()->button(QWizard::NextButton)->setEnabled(true);
-    wizard()->button(QWizard::NextButton)->setText("Next >");
-    btnProcess->setText("Finished");
-    registerField("MVS_finished", btnProcess);
+	wizard()->button(QWizard::NextButton)->setEnabled(true);
+	wizard()->button(QWizard::NextButton)->setText("Next >");
+	btnProcess->setText("Finished");
+	registerField("MVS_finished", btnProcess);
     }
 }
 
@@ -1113,6 +1157,12 @@ void MVSSelectorPage::wrongMessage()
 // Event: Advanced Options clicked
 void MVSSelectorPage::btnAdvancedOptionsClicked()
 {
+    QString get_SelItem = MVSSel->itemData(MVSSel->currentIndex()).toString();
+
+    QString str_commando = command->text();
+
+    qDebug() << str_commando.replace(QRegExp ("mvs=\"([^\"]*)\""), "mvs=\"" + get_SelItem + "\"");
+
     if (AdvancedOptions->checkState() == Qt::Checked) {
 	//Show all the Advanced Options
 	command->setEnabled(true);
@@ -1120,6 +1170,17 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
     	InputPath->QWidget::show();
     	btnInputPath->QWidget::show();
     	InputLabel->QWidget::show();
+	// Show sepcific options
+        if(get_SelItem == "2")
+        {
+   	    UseDensify->QWidget::hide();
+   	    UseRefine->QWidget::hide();
+        }
+	else if (get_SelItem == "1")
+        {
+   	    UseDensify->QWidget::show();
+   	    UseRefine->QWidget::show();
+        }
     }
     else {
 	// Hide all the Advanced options + command
@@ -1130,6 +1191,8 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
     	InputPath->QWidget::hide();
     	btnInputPath->QWidget::hide();
     	InputLabel->QWidget::hide();
+   	UseDensify->QWidget::hide();
+   	UseRefine->QWidget::hide();
     }
 }
 
@@ -1163,28 +1226,16 @@ void MVSSelectorPage::on_MVSSel_changed()
 
     qDebug() << str_commando.replace(QRegExp ("mvs=\"([^\"]*)\""), "mvs=\"" + get_SelItem + "\"");
     
-/*
+
     // Dirty: hide non-affected options, show affected
     if(get_SelItem == "2")
     {
 	// Show Matrix selector, hide Imagesfolder
 	if(AdvancedOptions->checkState() == Qt::Checked)
 	{
-	    MatrixSel->QWidget::show();
-	    MatrixSelLabel->QWidget::show();
-	    ImagesFolderLabel->QWidget::hide();
-	    ImagesFolderPath->QWidget::hide();
-	    btnImagesFolderPath->QWidget::hide();
-	    CameraSel->QWidget::hide();
-   	    CameraSelLabel->QWidget::hide();
+   	    UseDensify->QWidget::hide();
+   	    UseRefine->QWidget::hide();
 	}
-	    solverImage1->QWidget::hide();
-	    solverImage1Button->QWidget::hide();
-	    solverImage1Label->QWidget::hide();
-	    solverImage2->QWidget::hide();
-	    solverImage2Button->QWidget::hide();
-	    solverImage2Label->QWidget::hide();
-            image_selector_grid_descr->QWidget::hide();
     }
 
     // Dirty: show non-affected options
@@ -1193,27 +1244,46 @@ void MVSSelectorPage::on_MVSSel_changed()
 	// Hide Matrix selector + show Images
 	if(AdvancedOptions->checkState() == Qt::Checked)
 	{
-	    MatrixSel->QWidget::hide();
-	    MatrixSelLabel->QWidget::hide();
-	    ImagesFolderLabel->QWidget::show();
-	    ImagesFolderPath->QWidget::show();
-	    btnImagesFolderPath->QWidget::show();
-	    CameraSel->QWidget::show();
-   	    CameraSelLabel->QWidget::show();
+   	    UseDensify->QWidget::show();
+   	    UseRefine->QWidget::show();
 	}
-	solverImage1->QWidget::show();
-	solverImage1Button->QWidget::show();
-	solverImage1Label->QWidget::show();
-	solverImage2->QWidget::show();
-	solverImage2Button->QWidget::show();
-	solverImage2Label->QWidget::show();
-        image_selector_grid_descr->QWidget::show();
     }
-    command->setText(str_commando);
+// TODO:    enable_run_again();
 
-    enable_run_again();
-*/
 
     command->setText(str_commando);
 }
 
+// Event btnUseDensify Clicked
+void MVSSelectorPage::btnUseDensifyClicked()
+{
+    QString str_commando;
+    str_commando = command->text();
+    QString str(str_commando); 
+    if(UseDensify->checkState() == Qt::Checked)
+    {
+    qDebug() << str_commando.replace(QRegExp ("use_densify=\"([^\"]*)\""), "use_densify=\"ON\"");
+    }
+    else
+    {
+    qDebug() << str_commando.replace(QRegExp ("use_densify=\"([^\"]*)\""), "use_densify=\"OFF\"");
+    }
+    command->setText(str_commando);
+}
+
+// Event btnUseRefine Clicked
+void MVSSelectorPage::btnUseRefineClicked()
+{
+    QString str_commando;
+    str_commando = command->text();
+    QString str(str_commando); 
+    if(UseRefine->checkState() == Qt::Checked)
+    {
+    qDebug() << str_commando.replace(QRegExp ("use_refine=\"([^\"]*)\""), "use_refine=\"ON\"");
+    }
+    else
+    {
+    qDebug() << str_commando.replace(QRegExp ("use_refine=\"([^\"]*)\""), "use_refine=\"OFF\"");
+    }
+    command->setText(str_commando);
+}
