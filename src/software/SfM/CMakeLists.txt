@@ -319,7 +319,7 @@ IF(BUILD_SFM_GUI)
 set(CMAKE_AUTOMOC ON)
 
 find_package(PCL 1.2 REQUIRED)
-find_package(Qt5Widgets)
+find_package(Qt5Widgets REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
