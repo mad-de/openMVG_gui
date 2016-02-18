@@ -981,6 +981,12 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("sfm_data.json Folder:"));
     InputLabel->QWidget::hide();
+    OutputPath = new QLineEdit(work_dir);
+    OutputPath->QWidget::hide();
+    btnOutputPath = new QPushButton("Select");
+    btnOutputPath->QWidget::hide();
+    OutputLabel = new QLabel(tr("Output Folder:"));
+    OutputLabel->QWidget::hide();
     btnProcess = new QPushButton("Run");
     TerminalMode = new QCheckBox("Terminal Mode (Expert Users)");
     TerminalMode->QWidget::hide();
@@ -1010,10 +1016,13 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     advanced_options->addWidget(InputLabel, 4, 0);
     advanced_options->addWidget(InputPath, 4, 1);
     advanced_options->addWidget(btnInputPath, 4, 2);
+    advanced_options->addWidget(OutputLabel, 5, 0);
+    advanced_options->addWidget(OutputPath, 5, 1);
+    advanced_options->addWidget(btnOutputPath, 5, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 5, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 6, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 6, 0, 1, 3);
+    advanced_options->addWidget(command, 7, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
     terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
@@ -1030,6 +1039,7 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
     connect(btnInputPath,SIGNAL(clicked()),this,SLOT(btnInputPathClicked()));
+    connect(btnOutputPath,SIGNAL(clicked()),this,SLOT(btnOutputPathClicked()));
     connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
@@ -1043,19 +1053,17 @@ int MVSSelectorPage::nextId() const
     return -1;
 }
 
-
 // When Initializing page (use Show event instead of initialize page) set Text to "Skip" or "Next"
 void MVSSelectorPage::showEvent(QShowEvent*)
 {
-    InputPath->setText(field("Pipeline_OutputPath").toString());
     // Have we been here before? Set the buttons accordingly
-    if(field("MVS_finished").toString() == "false") {
-	wizard()->button(QWizard::NextButton)->setText("Next >");
+    if(field("MVS_finished").toString() == "Finished") {
+    	wizard()->button(QWizard::FinishButton)->setEnabled(true);
     }
-    else {
-    wizard()->button(QWizard::NextButton)->setText("Skip >");
-    }	
-    
+    else
+    {
+    	wizard()->button(QWizard::FinishButton)->setEnabled(false);
+    }
     // set inputpath + outputpath accordingly
     QString str_commando;
     str_commando = command->text();
@@ -1066,10 +1074,21 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     qDebug() << str_commando.replace(QRegExp ("output_dir=\"([^\"]*)\""), "output_dir=\"" + output_dir + "\"");
     command->setText(str_commando);
 
+    InputPath->setText(field("Pipeline_OutputPath").toString());
+    OutputPath->setText(output_dir);
+
     // Do we need the cancel button here? I don't think so...
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
     // Do we want the preview button here? Naaahhh....
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
+}
+
+// Enable re-running
+void MVSSelectorPage::enable_rerunning()
+{
+    btnProcess->setText("Run");
+    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnProcess->setEnabled(true);
 }
 
 // Event: Select Input path
@@ -1096,7 +1115,38 @@ void MVSSelectorPage::btnInputPathClicked()
     command->setText(str_commando);
 
     // Have we been here before? Enable re-running
-    if(field("MVS_finished").toString() == "false") {
+    if (field("MVS_finished").toString() != "Finished") {
+	btnProcess->setText("Run");
+	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+	btnProcess->setEnabled(true);
+    }
+}
+
+// Event: SelectOutput path
+void MVSSelectorPage::btnOutputPathClicked()
+{
+    QString str_get_commando;
+
+    str_get_commando = OutputPath->text();
+
+	QString OutputFolder;
+	
+	OutputFolder = QFileDialog::getExistingDirectory(
+    this, 
+    tr("Choose output folder"),
+    str_get_commando,
+    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
+    // change Folder according to selection in output field
+    OutputPath->setText(OutputFolder);
+    // changes outputpath="..." to new outputpath in exec field
+    QString str_commando;
+    str_commando = command->text();
+    QString str(str_commando); 
+    qDebug() << str_commando.replace(QRegExp ("output_dir=\"([^\"]*)\""), "output_dir=\"" + OutputFolder + "\"");
+    command->setText(str_commando);
+
+    // Have we been here before? Enable re-running
+    if (field("MVS_finished").toString() != "Finished") {
 	btnProcess->setText("Run");
 	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(true);
@@ -1106,11 +1156,12 @@ void MVSSelectorPage::btnInputPathClicked()
 // Event: Click Run
 void MVSSelectorPage::btnProcessClicked()
 {
-    // Disable Skip button + Run Button
-    wizard()->button(QWizard::NextButton)->setEnabled(false);
+    // Disable Skip button + Run Button + Preview button
+    wizard()->button(QWizard::FinishButton)->setEnabled(false);
     btnProcess->setText("working");
     btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(false);
+    wizard()->button(QWizard::CustomButton1)->setEnabled(false);
 
     QString str_command;
     txtReport->clear();
@@ -1139,12 +1190,14 @@ void MVSSelectorPage::rightMessage()
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
     }
-    txtReport->moveCursor (QTextCursor::End);
-    txtReport->insertPlainText (strdata);
-    txtReport->moveCursor (QTextCursor::End);
-    if (strdata.contains("Press Next to continue")) {
-	wizard()->button(QWizard::NextButton)->setEnabled(true);
-	wizard()->button(QWizard::NextButton)->setText("Next >");
+    else
+    {
+	txtReport->moveCursor (QTextCursor::End);
+    	txtReport->insertPlainText (strdata);
+    	txtReport->moveCursor (QTextCursor::End);
+    }
+    if (strdata.contains("Press Finish to close")) {
+    	wizard()->button(QWizard::FinishButton)->setEnabled(true);
 	btnProcess->setText("Finished");
 	registerField("MVS_finished", btnProcess);
     }
@@ -1180,6 +1233,9 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
     	InputPath->QWidget::show();
     	btnInputPath->QWidget::show();
     	InputLabel->QWidget::show();
+    	OutputPath->QWidget::show();
+    	btnOutputPath->QWidget::show();
+    	OutputLabel->QWidget::show();
 	// Show sepcific options
         if(get_SelItem == "2")
         {
@@ -1201,6 +1257,9 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
     	InputPath->QWidget::hide();
     	btnInputPath->QWidget::hide();
     	InputLabel->QWidget::hide();
+    	OutputPath->QWidget::hide();
+    	btnOutputPath->QWidget::hide();
+    	OutputLabel->QWidget::hide();
    	UseDensify->QWidget::hide();
    	UseRefine->QWidget::hide();
     }
@@ -1244,18 +1303,31 @@ void MVSSelectorPage::on_MVSSel_changed()
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"openMVS\"");
 	}
     }
-
-    if(get_SelItem == "2")
+    else if(get_SelItem == "2")
     {
-	// Show Matrix selector, hide Imagesfolder
-	if(AdvancedOptions->checkState() == Qt::Checked)
-	{
-   	    UseDensify->QWidget::hide();
-   	    UseRefine->QWidget::hide();
-	}
+	UseDensify->QWidget::hide();
+	UseRefine->QWidget::hide();
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"pmvs\"");
     }
-// TODO:    enable_run_again();
+    else if(get_SelItem == "3")
+    {
+	UseDensify->QWidget::hide();
+	UseRefine->QWidget::hide();
+	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"cmvs\"");
+    }
+    else if(get_SelItem == "4")
+    {
+	UseDensify->QWidget::hide();
+	UseRefine->QWidget::hide();
+	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"cmpmvs\"");
+    }
+    else if(get_SelItem == "5")
+    {
+	UseDensify->QWidget::hide();
+	UseRefine->QWidget::hide();
+	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"mve\"");
+    }
+    enable_rerunning();
     command->setText(str_commando);
 }
 

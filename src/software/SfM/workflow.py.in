@@ -118,33 +118,58 @@ elif user_vars["step"] == "pmvs":
  pPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
  pPMVS.wait()
 
- # Check if openMVS path exists - if not terminate
+ # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
   sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPNENMVG_PMVS_PATH=\" variable.");
+  sys.stderr.write("PMVS output path: " + user_vars["output_dir"]);
  else: 
 
   pPMVS2 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "pmvs_options.txt"] )
   pPMVS2.wait()
   if os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply")):
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply end_path");
-   print "\n\n************************************************\nRunning PMVS complete.\nOutput folder: " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply") + ".\nPress Finish to close program or check out the Preview.\n************************************************"
+   print "\n\n************************************************\nRunning PMVS complete.\nOutput file: " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply") + "\nPress Finish to close the program or press Preview to check out the preview.\n************************************************"
   else:
    sys.stderr.write("An error occured during running PMVS. The process halted.");
 
+elif user_vars["step"] == "cmvs":
+ pPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
+ pPMVS.wait()
 
-#./pmvs /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ pmvs_options.txt
+ # Check if PMVS path exists - if not terminate
+ if not os.path.exists(OPENMVG_PMVS_BIN):
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPNENMVG_PMVS_PATH=\" variable.");
+  sys.stderr.write("PMVS output path:" + user_vars["output_dir"]);
+ else: 
 
-#./cmvs /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ [MaxImageCountByCluster=100]
-#./cmvs /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ 30
-#./genOption /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/
-#./pmvs2 /home/martin/openMVG_build/software/SfM/ImageDataset_SceauxCastle/images_out/PMVS/ option-0000
+  pPMVS2 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "[MaxImageCountByCluster=100]"] )
+  pPMVS2.wait()
+
+  pPMVS3 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "30"] )
+  pPMVS3.wait()
+
+  pGenOption = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "genOption"), os.path.join(user_vars["output_dir"], "PMVS/")] )
+  pGenOption.wait()
+
+  pPMVS4 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "option-0000"] )
+  pPMVS4.wait()
+
+  if os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply")):
+   print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply end_path");
+   print "\n\n************************************************\nRunning CMVS complete.\nOutput file: " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply") + "\nPress Finish to close the program or press Preview check out the preview.\n************************************************"
+  else:
+   sys.stderr.write("An error occured during running CMVS. The process halted.");
 
 elif user_vars["step"] == "cmpmvs":
- print ("4.6. Export global results to CMPMVS")
- pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", reconstruction_dir+"/sfm_data.json", "-o", reconstruction_dir] )
- total_output += ("\nThe global CMPMVS folder was created in the "+reconstruction_dir+"/PMVS directory")
- pRecons.wait()
+ pCMPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
+ pCMPMVS.wait()
+ print "\n\n************************************************\nExporting to CMPMVS complete.\nOutput folder: " + os.path.join(user_vars["output_dir"], "CMPMVS/") + "\nPress Finish to close the program.\n************************************************"
  
+elif user_vars["step"] == "mve":
+ pMVE = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2MVE2"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
+ pMVE.wait()
+ print "\n\n************************************************\nExporting to MVE complete.\nOutput folder: " + os.path.join(user_vars["output_dir"], "MVE/") + "\nPress Finish to close the program.\n************************************************"
+
 elif user_vars["step"] == "openMVS":
  # Check if openMVS path exists - if not terminate
  if not os.path.exists(OPENMVS_BIN):

@@ -159,6 +159,7 @@ private slots:
     void rightMessage();
     void wrongMessage();
     void btnInputPathClicked();
+    void btnOutputPathClicked();
     void btnAdvancedOptionsClicked();
     void btnProcessClicked();
     void btnTerminalModeClicked();
@@ -166,11 +167,16 @@ private slots:
     void on_MVSSel_changed();
     void btnUseDensifyClicked();
     void btnUseRefineClicked();
+    void enable_rerunning();
 
 private:
     QLabel *bottomLabel; // !TODO! DELETE?
+    QLabel *InputLabel;
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
+    QLabel *OutputLabel;
+    QLineEdit *OutputPath;
+    QPushButton *btnOutputPath;
     QTextEdit *commandline; // !TODO! DOESNT EXIST - DELETE?
     QLabel *MVSSelLabel;
     QComboBox *MVSSel;
@@ -178,7 +184,6 @@ private:
     QCheckBox *TerminalMode;
     QTextEdit *txtReport;
     QLineEdit *command;
-    QLabel *InputLabel;
     QLabel *CommandLabel;
     QProcess *process_command;
     QGridLayout *main_grid;
