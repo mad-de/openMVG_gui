@@ -2,7 +2,7 @@
 #include <QPushButton>
 #include <QTextEdit>
 
-#include "software/SfM/omvg_gui.h"
+#include "software/SfM/SfM_gui.h"
 
 // Initialize paths and filters for later use
 QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
@@ -10,11 +10,11 @@ QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 
-QString initialcommandline_matching = "python workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3";
+QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3";
 
-QString initialcommandline_sfm_solver = "python workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3";
 
-QString initialcommandline_mvs_selector = "python workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
+QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";

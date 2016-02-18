@@ -1,5 +1,5 @@
-#ifndef omvg_gui_H
-#define omvg_gui_H
+#ifndef SfM_gui_H
+#define SfM_gui_H
 
 #include <QWizard>
 #include <QtWidgets>

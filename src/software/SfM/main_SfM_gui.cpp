@@ -3,7 +3,7 @@
 #include <QLocale>
 #include <QLibraryInfo>
 
-#include "software/SfM/omvg_gui.h"
+#include "software/SfM/SfM_gui.h"
 
 int main(int argc, char *argv[])
 {
