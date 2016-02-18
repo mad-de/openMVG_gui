@@ -36,9 +36,11 @@ public:
 
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;
- /*   void setVisible(bool visible) Q_DECL_OVERRIDE; */
 
 private slots:
+    void finished_demo_download();
+    void failed_demo_download();
+    void check_demo_path();
     void rightMessage();
     void wrongMessage();
     void btnInputPathClicked();
@@ -49,10 +51,9 @@ private slots:
     void on_CameraSel_changed();
 
 private:
-    QLabel *bottomLabel; // !TODO! DELETE?
+    QTimer* demo_download_timer;
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
-    QTextEdit *commandline; // !TODO! DOESNT EXIST - DELETE?
     QCheckBox *AdvancedOptions;
     QCheckBox *TerminalMode;
     QTextEdit *txtReport;
@@ -99,14 +100,12 @@ private slots:
 
 private:
     QLineEdit *StatusPipelinePage;
-    QLabel *bottomLabel; // !TODO! DELETE?
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
     QLineEdit *OutputPath;
     QLineEdit *ImagesFolderPath;
     QPushButton *btnImagesFolderPath;
     QLabel *ImagesFolderLabel;
-    QTextEdit *commandline; // !TODO! DOESNT EXIST - DELETE?
     QPushButton *btnProcess;
     QLabel *PipelineSelLabel;
     QComboBox *PipelineSel;
@@ -153,7 +152,6 @@ public:
 
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;
- /*   void setVisible(bool visible) Q_DECL_OVERRIDE; */
 
 private slots:
     void rightMessage();
@@ -170,14 +168,12 @@ private slots:
     void enable_rerunning();
 
 private:
-    QLabel *bottomLabel; // !TODO! DELETE?
     QLabel *InputLabel;
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
     QLabel *OutputLabel;
     QLineEdit *OutputPath;
     QPushButton *btnOutputPath;
-    QTextEdit *commandline; // !TODO! DOESNT EXIST - DELETE?
     QLabel *MVSSelLabel;
     QComboBox *MVSSel;
     QCheckBox *AdvancedOptions;

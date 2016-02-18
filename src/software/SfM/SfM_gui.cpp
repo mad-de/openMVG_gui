@@ -16,6 +16,15 @@ QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step
 
 QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
+// Define some vars for working on the demo files
+QProcess *procDemoDl = new QProcess();
+QDir demo_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
+QFile Ktxt(parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/K.txt");
+QFile Readmetxt (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/Readme.txt");
+QString demo_path (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/");
+// Ugly: use int not to call download over and over again
+int visited_matching = 0;
+
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
 
@@ -28,10 +37,11 @@ OMVGguiWizard::OMVGguiWizard(QWidget *parent)
 
     setStartId(Page_Matching);
 
-// !!TODO! IF KANN RAUS? DELETE NEXT THREE LINES
-#ifndef Q_OS_MAC
+    // Mac stuff (for multi-platform approach)
+    #ifndef Q_OS_MAC
     setWizardStyle(ModernStyle);
-#endif
+    #endif
+
     setOption(HaveHelpButton, true);
     // Generate Preview Button
     setButtonText(QWizard::CustomButton1, tr("&Preview"));
@@ -55,18 +65,14 @@ void OMVGguiWizard::showHelp()
     case Page_Matching:
         message = tr("This step will process all Images in the selected folder to prepare them for the next steps. In the bottom part of the window you will see the commandline with the command that will be processed. Feel free to change the parameters transmitted to the terminal at a later stage. To start the process Select the folder containing ALL images and press run. Wait until process is finished. If you have already processed the files you want to work on, you can skip this step by clicking Next Button and resume with another step.");
         break;
-    case Page_MVSSelector:
-        message = tr("phew...");
+    case Page_Pipeline:
+        message = tr("tba");
         break;
-    default:
-        message = tr("This help is likely not to be of any help.");
+    case Page_MVSSelector:
+        message = tr("tba");
+        break;
     }
-
-    if (lastHelpMessage == message)
-        message = tr("Sorry, I already gave what help I could. "
-                     "Maybe you should try asking a human?");
-
-    QMessageBox::information(this, tr("Open MVG GUI Help"), message);
+    QMessageBox::information(this, tr("Open MVG SfM GUI Help"), message);
 
     lastHelpMessage = message;
 }
@@ -86,10 +92,11 @@ void OMVGguiWizard::showPreview()
     default:
         preview_file = field("Preview_Pipeline").toString();
     }
-    QString preview_commandline = "./ply_preview " + preview_file + " " + preview_file;
-
-    process_preview = new QProcess();
-    process_preview->start("/bin/bash", QStringList() << "-c" << QString(preview_commandline));
+    QProcess *procPreview = new QProcess();
+    QStringList arguments;
+    arguments << preview_file << preview_file;
+    QString preview_command = "./openMVG_SfM_gui_ply_preview";
+    procPreview->start(preview_command, arguments);
 }
 
 // PAGE
@@ -107,29 +114,29 @@ MatchingPage::MatchingPage(QWidget *parent)
 
     // Set specific widgets
     InputPath = new QLineEdit(work_dir);
-    btnInputPath = new QPushButton("Select");
+    btnInputPath = new QPushButton(tr("Select"));
     InputLabel = new QLabel(tr("Image folder:"));
     // Set general widgets
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
-    AdvancedOptions = new QCheckBox("Advanced Options");
+    AdvancedOptions = new QCheckBox(tr("Advanced Options"));
     command = new QLineEdit("init");
     command = new QLineEdit(initialcommandline_matching);
     command->setStyleSheet("color: #ffffff; background-color: #300a24;");
     command->setEnabled(false);
     command->QWidget::hide();
-    btnProcess = new QPushButton("Run");
-    TerminalMode = new QCheckBox("Terminal Mode (Expert Users)");
+    btnProcess = new QPushButton(tr("Run"));
+    TerminalMode = new QCheckBox(tr("Terminal Mode (Expert Users)"));
     TerminalMode->QWidget::hide();
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
     input_fields = new QGridLayout;
-    CameraSelLabel = new QLabel("[SfMInit_ImageListing] Camera Model:");
+    CameraSelLabel = new QLabel(tr("[SfMInit_ImageListing] Camera Model:"));
     CameraSel = new QComboBox;
-    CameraSel->addItem("Pinhole", QVariant(1));
-    CameraSel->addItem("Pinhole radial 1", QVariant(2));
-    CameraSel->addItem("Pinhole radial 3 (default)", QVariant(3));
+    CameraSel->addItem(tr("Pinhole"), QVariant(1));
+    CameraSel->addItem(tr("Pinhole radial 1"), QVariant(2));
+    CameraSel->addItem(tr("Pinhole radial 3 (default)"), QVariant(3));
     CameraSel->QWidget::hide();
     CameraSelLabel->QWidget::hide();
 
@@ -176,18 +183,92 @@ int MatchingPage::nextId() const
 // When Initializing page (use Show event instead of initialize page) set Text to "Skip" or "Next"
 void MatchingPage::showEvent(QShowEvent*)
 {
+    if ((QDir(demo_dir).exists() == false) and visited_matching == 0)
+     {
+	wizard()->button(QWizard::NextButton)->setEnabled(false);
+	btnProcess->setText(tr("working"));
+	btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+	btnProcess->setEnabled(false);
+	txtReport->moveCursor (QTextCursor::End);
+        txtReport->insertPlainText (tr("You seem to be here for the first time.\nI'll just download the demo files for you... Please be patient..."));
+        txtReport->moveCursor (QTextCursor::End);
+	QString git_demo = "git clone https://github.com/openMVG/ImageDataset_SceauxCastle.git " + demo_path;
+	procDemoDl->start(git_demo);
+	// Call finished demo when download is complete
+        connect(procDemoDl, SIGNAL(finished(int , QProcess::ExitStatus )), this, SLOT(finished_demo_download()));
+        // Set a timer to 20 secs and call if download isn't finished by then...
+    	demo_download_timer = new QTimer(this);
+    	demo_download_timer->setSingleShot(true);
+        demo_download_timer->start(20000);
+    	connect(demo_download_timer, SIGNAL(timeout()), SLOT(failed_demo_download()));
+        visited_matching = 1;
+     }
+     else
+     {
+	check_demo_path();
+     }
     // Have we been here before? Set the buttons accordingly
-    if(field("Matching_finished").toString() == "false") {
-	wizard()->button(QWizard::NextButton)->setText("Next >");
+    if(field("Matching_finished").toString() == "false")
+    {
+	wizard()->button(QWizard::NextButton)->setText(tr("Next >"));
     }
-    else {
-    wizard()->button(QWizard::NextButton)->setText("Skip >");
+    else 
+    {
+    wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
     }	
 
     // Do we need the cancel button here? I don't think so...
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
     // Do we want the preview button here? Naaahhh....
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
+}
+
+void MatchingPage::finished_demo_download()
+{
+    if (QDir(demo_dir).exists() == true)
+    {
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (tr(" Download complete!\n"));
+	txtReport->moveCursor (QTextCursor::End);
+        check_demo_path();	
+    } 
+}
+void MatchingPage::failed_demo_download()
+{
+    if (QDir(demo_dir).exists() == false)
+    {
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (tr(" Download failed.\nPlease check your Internet connection.\nAlthough the demo files are not available, you can still use this program.\n"));
+	txtReport->moveCursor (QTextCursor::End);	
+    }    
+    check_demo_path();	
+}
+void MatchingPage::check_demo_path()
+{
+    if((Ktxt.exists()) or (Readmetxt.exists()))
+    {
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (tr("I'm just cleaning up the /images folder for you...\n"));
+	txtReport->moveCursor (QTextCursor::End);
+	Ktxt.remove();
+	Readmetxt.remove();
+	if (((Ktxt.exists() == false) and (Readmetxt.exists() == false)))
+	     {
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (tr("We're good. Have fun playing around."));
+	txtReport->moveCursor (QTextCursor::End);
+	     }
+	else
+	{
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (tr("Arrgh! I failed to delete some extra text files in the /images folder. But you can safely ignore these warnings during matching. Have fun playing around."));
+	txtReport->moveCursor (QTextCursor::End);
+	}
+     }
+     wizard()->button(QWizard::NextButton)->setEnabled(true);
+     btnProcess->setText(tr("Run"));
+     btnProcess->setStyleSheet(tr("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;"));
+     btnProcess->setEnabled(true);
 }
 
 // Event: Select Input path
@@ -215,7 +296,7 @@ void MatchingPage::btnInputPathClicked()
 
     // Have we been here before? Enable re-running
     if(field("Matching_finished").toString() == "false") {
-	btnProcess->setText("Run");
+	btnProcess->setText(tr("Run"));
 	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(true);
     }
@@ -226,7 +307,7 @@ void MatchingPage::btnProcessClicked()
 {
     // Disable Skip button + Run Button
     wizard()->button(QWizard::NextButton)->setEnabled(false);
-    btnProcess->setText("working");
+    btnProcess->setText(tr("working"));
     btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(false);
 
@@ -250,7 +331,7 @@ void MatchingPage::rightMessage()
     if (strdata.contains("Press Next to continue")) {
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Next >");
-    btnProcess->setText("Finished");
+    btnProcess->setText(tr("Finished"));
     registerField("Matching_finished", btnProcess);
     }
 }
@@ -264,7 +345,7 @@ void MatchingPage::wrongMessage()
     // Re-enable Skip + Run Button Button
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Skip >");
-    btnProcess->setText("Run");
+    btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
 }
@@ -306,7 +387,7 @@ void MatchingPage::btnTerminalModeClicked()
 // Event: Field command changed --> Enable run (Assume, whoever clicks that knows what he's doing)
 void MatchingPage::fldcommandClicked()
 {
-    btnProcess->setText("Run");
+    btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
 }
@@ -338,25 +419,25 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Set specific widgets
     PipelineSelLabel = new QLabel(tr("Select SfM solver:"));
     PipelineSel = new QComboBox;
-    PipelineSel->addItem("Incremental (Standard) - Uses two pictures with best matches)", QVariant(1));
-    PipelineSel->addItem("Global", QVariant(2));
+    PipelineSel->addItem(tr("Incremental (Standard) - Uses two pictures with best matches)"), QVariant(1));
+    PipelineSel->addItem(tr("Global"), QVariant(2));
     InputPath = new QLineEdit("");
     InputPath->QWidget::hide();
     OutputPath = new QLineEdit("");
     OutputPath->QWidget::hide();
-    btnInputPath = new QPushButton("Select");
+    btnInputPath = new QPushButton(tr("Select"));
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("Matches Path:"));
     InputLabel->QWidget::hide();
     ImagesFolderPath = new QLineEdit("");
     ImagesFolderPath->QWidget::hide();
-    btnImagesFolderPath = new QPushButton("Select");
+    btnImagesFolderPath = new QPushButton(tr("Select"));
     btnImagesFolderPath->QWidget::hide();
     ImagesFolderLabel = new QLabel(tr("Image Folder:"));
     ImagesFolderLabel->QWidget::hide();
-    image_selector_grid_descr = new QLabel("[IncrementalSfM] Select Images with best matches to begin matching:");
+    image_selector_grid_descr = new QLabel(tr("[IncrementalSfM] Select Images with best matches to begin matching:"));
     image_selector_grid_descr->QWidget::hide();
-    ratioLabel = new QLabel("Ratio:");
+    ratioLabel = new QLabel(tr("Ratio:"));
     ratioLabel->QWidget::hide();
     sliderRatio = new QSlider(Qt::Horizontal);
     sliderRatio->setFocusPolicy(Qt::StrongFocus);
@@ -372,32 +453,32 @@ PipelinePage::PipelinePage(QWidget *parent)
     ratioValue->QWidget::setFixedWidth(100);
     ratioValue->setAlignment(Qt::AlignHCenter);	
     ratioValue->QWidget::hide();
-    CameraSelLabel = new QLabel("[IncrementalSfM] Camera Model:");
+    CameraSelLabel = new QLabel(tr("[IncrementalSfM] Camera Model:"));
     CameraSel = new QComboBox;
-    CameraSel->addItem("Pinhole", QVariant(1));
-    CameraSel->addItem("Pinhole radial 1", QVariant(2));
-    CameraSel->addItem("Pinhole radial 3 (default)", QVariant(3));
+    CameraSel->addItem(tr("Pinhole"), QVariant(1));
+    CameraSel->addItem(tr("Pinhole radial 1"), QVariant(2));
+    CameraSel->addItem(tr("Pinhole radial 3 (default)"), QVariant(3));
     CameraSel->QWidget::hide();
     CameraSelLabel->QWidget::hide();
     // Incremental-specific
     solverImage1 = new QLineEdit("");
     solverImage1->QWidget::hide();
-    solverImage1Label = new QLabel("Image 1:");
+    solverImage1Label = new QLabel(tr("Image 1:"));
     solverImage1Label->QWidget::hide();
-    solverImage1Button = new QPushButton("Select");
+    solverImage1Button = new QPushButton(tr("Select"));
     solverImage1Button->QWidget::hide();
     solverImage2 = new QLineEdit("");
     solverImage2->QWidget::hide();
-    solverImage2Label = new QLabel("Image 2:");
+    solverImage2Label = new QLabel(tr("Image 2:"));
     solverImage2Label->QWidget::hide();
-    solverImage2Button = new QPushButton("Select");
+    solverImage2Button = new QPushButton(tr("Select"));
     solverImage2Button->QWidget::hide();
     // Global-specific
-    MatrixSelLabel = new QLabel("[GLOBAL] Matrix Filtering:");
+    MatrixSelLabel = new QLabel(tr("[GLOBAL] Matrix Filtering:"));
     MatrixSel = new QComboBox;
-    MatrixSel->addItem("Essential matrix filtering (same focal length)", QVariant(1));
-    MatrixSel->addItem("Fundamental matrix filtering", QVariant(2));
-    MatrixSel->addItem("Homography matrix filtering", QVariant(3));
+    MatrixSel->addItem(tr("Essential matrix filtering (same focal length)"), QVariant(1));
+    MatrixSel->addItem(tr("Fundamental matrix filtering"), QVariant(2));
+    MatrixSel->addItem(tr("Homography matrix filtering"), QVariant(3));
     MatrixSel->QWidget::hide();
     MatrixSelLabel->QWidget::hide();
 
@@ -405,14 +486,14 @@ PipelinePage::PipelinePage(QWidget *parent)
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
-    AdvancedOptions = new QCheckBox("Advanced Options");
+    AdvancedOptions = new QCheckBox(tr("Advanced Options"));
     command = new QLineEdit("init");
     command = new QLineEdit(initialcommandline_sfm_solver);
     command->setStyleSheet("color: #ffffff; background-color: #300a24;");
     command->setEnabled(false);
     command->QWidget::hide();
-    btnProcess = new QPushButton("Run");
-    TerminalMode = new QCheckBox("Terminal Mode (Advanced Users)");
+    btnProcess = new QPushButton(tr("Run"));
+    TerminalMode = new QCheckBox(tr("Terminal Mode (Advanced Users)"));
     TerminalMode->QWidget::hide();
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
@@ -425,11 +506,11 @@ PipelinePage::PipelinePage(QWidget *parent)
     advanced_options = new QGridLayout;   
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
-    registerField("Pipeline_OutputPath", OutputPath);
+    registerField(tr("Pipeline_OutputPath"), OutputPath);
     StatusPipelinePage = new QLineEdit("init");
-    registerField("PipelinePage_status", StatusPipelinePage);
+    registerField(tr("PipelinePage_status"), StatusPipelinePage);
     preview_pipeline = new QLineEdit;
-    registerField("Preview_Pipeline", preview_pipeline);
+    registerField(tr("Preview_Pipeline"), preview_pipeline);
 
     // Step specific layout
     input_fields->addWidget(PipelineSelLabel, 0 , 0);
@@ -536,10 +617,10 @@ void PipelinePage::showEvent(QShowEvent*)
     }
     // Have we finished here before? Set the buttons accordingly
     if(field("PipelinePage_status").toString() == "finished") {
-	wizard()->button(QWizard::NextButton)->setText("Next >");
+	wizard()->button(QWizard::NextButton)->setText(tr("Next >"));
     }
     else {
-    wizard()->button(QWizard::NextButton)->setText("Skip >");
+    wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
     }	
 }
 
@@ -606,11 +687,12 @@ void PipelinePage::btnProcessClicked()
                              tr("Please select the two Pictures with the best matches first"));
     }
     else {
-	// Disable Skip button + Run Button
+	// Disable Skip button + Back Button + Run Button
 	wizard()->button(QWizard::NextButton)->setEnabled(false);
+	wizard()->button(QWizard::BackButton)->setEnabled(false);
      	StatusPipelinePage->setText("running");
         registerField("PipelinePage_status", StatusPipelinePage);
-	btnProcess->setText("working");
+	btnProcess->setText(tr("working"));
 	btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(false);
 
@@ -659,7 +741,8 @@ void PipelinePage::rightMessage()
     if (strdata.contains("Press Next to continue")) {
 	wizard()->button(QWizard::NextButton)->setEnabled(true);
 	wizard()->button(QWizard::NextButton)->setText("Next >");
-	btnProcess->setText("Finished");
+	wizard()->button(QWizard::BackButton)->setEnabled(true);
+	btnProcess->setText(tr("Finished"));
 	StatusPipelinePage->setText("finished");
 	registerField("PipelinePage_status", StatusPipelinePage);
     }
@@ -746,7 +829,7 @@ void PipelinePage::btnTerminalModeClicked()
 // Event: Field command changed --> Enable run (Assume, whoever clicks that knows what he's doing)
 void PipelinePage::fldcommandClicked()
 {
-    btnProcess->setText("Run");
+    btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
 }
@@ -931,7 +1014,8 @@ void PipelinePage::enable_rerunning()
 {
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Skip >");
-    btnProcess->setText("Run");
+    wizard()->button(QWizard::BackButton)->setEnabled(true);
+    btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
 }
@@ -939,7 +1023,7 @@ void PipelinePage::enable_rerunning()
 void PipelinePage::enable_run_again()
 {
     if(field("PipelinePage_status").toString() == "finished") {
-	btnProcess->setText("Run");
+	btnProcess->setText(tr("Run"));
 	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(true);
     }
@@ -961,15 +1045,15 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     // Set general widgets
     MVSSelLabel = new QLabel(tr("Select MVS solver / Export format:"));
     MVSSel = new QComboBox;
-    MVSSel->addItem("openMVS (Standard)", QVariant(1));
-    MVSSel->addItem("PMVS", QVariant(2));
-    MVSSel->addItem("CMVS", QVariant(3));
-    MVSSel->addItem("CMPMVS (Export only)", QVariant(4));
-    MVSSel->addItem("MVE (Export only)", QVariant(5));
+    MVSSel->addItem(tr("openMVS (Standard)"), QVariant(1));
+    MVSSel->addItem(tr("PMVS"), QVariant(2));
+    MVSSel->addItem(tr("CMVS"), QVariant(3));
+    MVSSel->addItem(tr("CMPMVS (Export only)"), QVariant(4));
+    MVSSel->addItem(tr("MVE (Export only)"), QVariant(5));
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
-    AdvancedOptions = new QCheckBox("Advanced Options");
+    AdvancedOptions = new QCheckBox(tr("Advanced Options"));
     command = new QLineEdit("init");
     command = new QLineEdit(initialcommandline_mvs_selector);
     command->setStyleSheet("color: #ffffff; background-color: #300a24;");
@@ -977,25 +1061,25 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     command->QWidget::hide();
     InputPath = new QLineEdit(work_dir);
     InputPath->QWidget::hide();
-    btnInputPath = new QPushButton("Select");
+    btnInputPath = new QPushButton(tr("Select"));
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("sfm_data.json Folder:"));
     InputLabel->QWidget::hide();
     OutputPath = new QLineEdit(work_dir);
     OutputPath->QWidget::hide();
-    btnOutputPath = new QPushButton("Select");
+    btnOutputPath = new QPushButton(tr("Select"));
     btnOutputPath->QWidget::hide();
     OutputLabel = new QLabel(tr("Output Folder:"));
     OutputLabel->QWidget::hide();
-    btnProcess = new QPushButton("Run");
-    TerminalMode = new QCheckBox("Terminal Mode (Expert Users)");
+    btnProcess = new QPushButton(tr("Run"));
+    TerminalMode = new QCheckBox(tr("Terminal Mode (Expert Users)"));
     TerminalMode->QWidget::hide();
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
-    UseDensify = new QCheckBox("[openmVS] Densify Point Cloud");
+    UseDensify = new QCheckBox(tr("[openmVS] Densify Point Cloud"));
     UseDensify->QWidget::hide();
     UseDensify->QAbstractButton::setChecked(true);
-    UseRefine = new QCheckBox("[openmVS] Refine Mesh");
+    UseRefine = new QCheckBox(tr("[openmVS] Refine Mesh"));
     UseRefine->QWidget::hide();
     UseRefine->QAbstractButton::setChecked(true);
     preview_mvs = new QLineEdit();
@@ -1086,9 +1170,11 @@ void MVSSelectorPage::showEvent(QShowEvent*)
 // Enable re-running
 void MVSSelectorPage::enable_rerunning()
 {
-    btnProcess->setText("Run");
-    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
-    btnProcess->setEnabled(true);
+    if (field("MVS_finished").toString() == "Finished") {
+	btnProcess->setText(tr("Run"));
+	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+	btnProcess->setEnabled(true);
+    }
 }
 
 // Event: Select Input path
@@ -1115,11 +1201,7 @@ void MVSSelectorPage::btnInputPathClicked()
     command->setText(str_commando);
 
     // Have we been here before? Enable re-running
-    if (field("MVS_finished").toString() != "Finished") {
-	btnProcess->setText("Run");
-	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
-	btnProcess->setEnabled(true);
-    }
+    enable_rerunning();
 }
 
 // Event: SelectOutput path
@@ -1145,12 +1227,8 @@ void MVSSelectorPage::btnOutputPathClicked()
     qDebug() << str_commando.replace(QRegExp ("output_dir=\"([^\"]*)\""), "output_dir=\"" + OutputFolder + "\"");
     command->setText(str_commando);
 
-    // Have we been here before? Enable re-running
-    if (field("MVS_finished").toString() != "Finished") {
-	btnProcess->setText("Run");
-	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
-	btnProcess->setEnabled(true);
-    }
+    // Enable re_run
+    enable_rerunning();
 }
 
 // Event: Click Run
@@ -1158,7 +1236,8 @@ void MVSSelectorPage::btnProcessClicked()
 {
     // Disable Skip button + Run Button + Preview button
     wizard()->button(QWizard::FinishButton)->setEnabled(false);
-    btnProcess->setText("working");
+    wizard()->button(QWizard::BackButton)->setEnabled(false);
+    btnProcess->setText(tr("working"));
     btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(false);
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
@@ -1198,6 +1277,7 @@ void MVSSelectorPage::rightMessage()
     }
     if (strdata.contains("Press Finish to close")) {
     	wizard()->button(QWizard::FinishButton)->setEnabled(true);
+	wizard()->button(QWizard::BackButton)->setEnabled(true);
 	btnProcess->setText("Finished");
 	registerField("MVS_finished", btnProcess);
     }
@@ -1209,10 +1289,9 @@ void MVSSelectorPage::wrongMessage()
     QByteArray strdata = process_command->readAllStandardError();
     txtReport->setTextColor(Qt::red);
     txtReport->append(strdata);
-    // Re-enable Skip + Run Button Button
-    wizard()->button(QWizard::NextButton)->setEnabled(true);
-    wizard()->button(QWizard::NextButton)->setText("Skip >");
-    btnProcess->setText("Run");
+    // Re-enable Back + Run Button Button
+    wizard()->button(QWizard::BackButton)->setEnabled(true);
+    btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
 }
@@ -1281,7 +1360,7 @@ void MVSSelectorPage::btnTerminalModeClicked()
 // Event: Field command changed --> Enable run (Assume, whoever clicks that knows what he's doing)
 void MVSSelectorPage::fldcommandClicked()
 {
-    btnProcess->setText("Run");
+    btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
 }
@@ -1300,8 +1379,8 @@ void MVSSelectorPage::on_MVSSel_changed()
 	{
    	    UseDensify->QWidget::show();
    	    UseRefine->QWidget::show();
-	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"openMVS\"");
 	}
+	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"openMVS\"");
     }
     else if(get_SelItem == "2")
     {

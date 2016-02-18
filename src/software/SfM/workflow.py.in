@@ -28,8 +28,11 @@ for num in sys.argv[1:]:
 
 # Indicate the openMVG binary directory
 OPENMVG_SFM_BIN = "@OPENMVG_SOFTWARE_SFM_BUILD_DIR@"
-OPENMVG_PMVS_BIN = "@OPNENMVG_PMVS_BIN_PATH@"
-OPENMVS_BIN = os.path.join(os.path.expanduser('~'), "openMVS_build/bin")
+OPENMVG_PMVS_BIN = "@OPENMVG_PMVS_BIN_PATH@"
+if "@OPENMVS_BIN_PATH@" == "not-set":
+ OPENMVS_BIN = os.path.join(os.path.expanduser('~'), "openMVS_build/bin")
+else:
+ OPENMVS_BIN = "@OPENMVS_BIN_PATH@"
 # Indicate the openMVG camera sensor width directory
 CAMERA_SENSOR_WIDTH_DIRECTORY = "@OPENMVG_SOFTWARE_SFM_SRC_DIR@" + "/../../openMVG/exif/sensor_width_database"
 camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
@@ -120,7 +123,7 @@ elif user_vars["step"] == "pmvs":
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
-  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPNENMVG_PMVS_PATH=\" variable.");
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.");
   sys.stderr.write("PMVS output path: " + user_vars["output_dir"]);
  else: 
 
@@ -138,7 +141,7 @@ elif user_vars["step"] == "cmvs":
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
-  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPNENMVG_PMVS_PATH=\" variable.");
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.");
   sys.stderr.write("PMVS output path:" + user_vars["output_dir"]);
  else: 
 

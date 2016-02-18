@@ -343,10 +343,12 @@ ENDIF(BUILD_SFM_GUI)
 # Catch a string from CMAKE
 #
 
-SET(OPNENMVG_PMVS_PATH "/usr/lib/PMVS/" CACHE STRING "Path to your PMVS binary folder")
-SET(OPNENMVG_PMVS_BIN_PATH "${OPNENMVG_PMVS_PATH}/main")
+SET(OPENMVG_PMVS_PATH "/usr/lib/PMVS/" CACHE STRING "Path to your PMVS binary folder")
+SET(OPENMVG_PMVS_BIN_PATH "${OPNENMVG_PMVS_PATH}/main")
+SET(OPENMVS_BIN_PATH "not-set" CACHE STRING "Path to your openMVS binary folder. not-set will use /home/user/OpenMVS_build/bin/")
+
 ##
-# Export tutorial with valid path thanks to a configuration file
+# Export tutorial & SfM workflow file with valid paths thanks to a configuration file
 ##
 
 SET(OPENMVG_SOFTWARE_SFM_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
