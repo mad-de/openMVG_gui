@@ -1,5 +1,5 @@
-very early gui for [OpenMVG](http://imagine.enpc.fr/~moulonp/openMVG/)
+A gui for the SfM pipelines of [OpenMVG](http://imagine.enpc.fr/~moulonp/openMVG/). To be built alongside OpenMVG.
 
-#Refrain from testing - not working yet.
+# Very early version. Expect lots and lots of bugs.
 
 [Building](https://github.com/mad-de/openMVG_gui/blob/master/BUILD.md)

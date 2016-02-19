@@ -36,6 +36,7 @@ public:
 
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;
+    QPushButton *btnProcess;
 
 private slots:
     void finished_demo_download();
@@ -62,7 +63,6 @@ private:
     QLabel *CommandLabel;
     QProcess *process_command;
     QGridLayout *input_fields;
-    QPushButton *btnProcess;
     QLabel *CameraSelLabel;
     QComboBox *CameraSel;
 };

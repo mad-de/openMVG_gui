@@ -28,8 +28,7 @@ cd ..
 
 #OpenMVG (Required)
 git clone --recursive https://github.com/mad-de/openMVG_gui.git openMVG
-mkdir openMVG_build
-cd openMVG_build
+mkdir openMVG_build && cd openMVG_build
 cmake -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/ -DCMAKE_INSTALL_PREFIX=$main_path/openMVG_build/openMVG_install -DBUILD_SFM_GUI=ON -DOPENMVG_PMVS_PATH=$main_path/CMVS-PMVS_build
 make
 cd ..
@@ -56,3 +55,6 @@ cd ~/openMVG_build/Linux-x86_64-RELEASE
 * -DBUILD_SFM_GUI=       [STANDARD: ON]
 * -DOPENMVG_PMVS_PATH=  [STANDARD: $main_path/CMVS-PMVS_build]
 * -DOPENMVS_BIN_PATH= [STANDARD: not-set]
+
+# Annotations:
+* currently using a fork of CMVS-PMVS to fix the warning behaviour in this program. 
