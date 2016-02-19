@@ -344,7 +344,7 @@ ENDIF(BUILD_SFM_GUI)
 #
 
 SET(OPENMVG_PMVS_PATH "/usr/lib/PMVS/" CACHE STRING "Path to your PMVS binary folder")
-SET(OPENMVG_PMVS_BIN_PATH "${OPNENMVG_PMVS_PATH}/main")
+SET(OPENMVG_PMVS_BIN_PATH "${OPENMVG_PMVS_PATH}/main")
 SET(OPENMVS_BIN_PATH "not-set" CACHE STRING "Path to your openMVS binary folder. not-set will use /home/user/OpenMVS_build/bin/")
 
 ##
