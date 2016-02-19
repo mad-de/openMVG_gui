@@ -36,7 +36,6 @@ public:
 
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;
-    QPushButton *btnProcess;
 
 private slots:
     void finished_demo_download();
@@ -59,6 +58,7 @@ private:
     QCheckBox *TerminalMode;
     QTextEdit *txtReport;
     QLineEdit *command;
+    QPushButton *btnProcess;
     QLabel *InputLabel;
     QLabel *CommandLabel;
     QProcess *process_command;
