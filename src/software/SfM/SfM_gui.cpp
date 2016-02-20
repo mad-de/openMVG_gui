@@ -16,9 +16,10 @@ QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step
 
 QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
-// Define some vars for working on the demo files
+// Define some vars for working on the demo files use - images dir for the check
 QProcess *procDemoDl = new QProcess();
 QDir demo_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
+QDir imageset_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/";
 QFile Ktxt(parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/K.txt");
 QFile Readmetxt (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/Readme.txt");
 QString demo_path (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/");
@@ -63,13 +64,13 @@ void OMVGguiWizard::showHelp()
 
     switch (currentId()) {
     case Page_Matching:
-        message = tr("This step will process all Images in the selected folder to prepare them for the next steps. In the bottom part of the window you will see the commandline with the command that will be processed. Feel free to change the parameters transmitted to the terminal at a later stage. To start the process Select the folder containing ALL images and press run. Wait until process is finished. If you have already processed the files you want to work on, you can skip this step by clicking Next Button and resume with another step.");
+        message = tr("This step will process all Images in the selected folder to prepare them for the next steps.<br>In the bottom part of the window you will see the commandline with the command that will be processed. Feel free to change the parameters transmitted to the terminal at a later stage. To start the process Select the folder containing ALL images and press run. Wait until process is finished.<br> If you have already processed the files you want to work on, you can skip this step by clicking Next Button and resume with another step.");
         break;
     case Page_Pipeline:
-        message = tr("tba");
+        message = tr("<u>This step will let you chose between one SfM solving options:</u><br><br><b>GlobalACSfM</b> is based on the paper \"Global Fusion of Relative Motions for Robust, Accurate and Scalable Structure from Motion.\" published at ICCV 2013<br>Please use: -p HIGH (describer preset: HIGH option on openMVG_main_ComputeFeatures and -r 0.8 (ratio: 0.8) on openMVG_main_ComputeMatches.<br><br>The<b>ACSfM</b> SfM is an evolution of the implementation used for the paper \"Adaptive Structure from Motion with a contrario model estimation\" published at ACCV 2012.<br>The incremental pipeline is a growing reconstruction process. It starts from an initial two-view reconstruction (the seed) that is iteratively extended by adding new views and 3D points, using pose estimation and triangulation. Due to the incremental nature of the process, successive steps of non-linear refinement, like Bundle Adjustment (BA) and Levenberg-Marquardt steps, are performed to minimize the accumulated error (drift).");
         break;
     case Page_MVSSelector:
-        message = tr("tba");
+        message = tr("<b>OpenMVS</b> allows to compute dense points cloud, surface and textured surfaces of OpenMVG scenes. OpenMVS uses OpenMVG scene thanks to a scene importer.<br><br>OpenMVG exports <b>[PMVS]</b> ready to use project (images, projection matrices and pmvs_options.txt files). If CMVS-PMVS is installed, this program will eun them after exporting.<br><br><b>CMVS</b> is aimed at machines with low memory.<br><br><b>MVE</b> can import a converted openMVG SfM scene and use it to create dense depth map and complete dense 3D models.<br><br>OpenMVG exports <b>[CMPMVS]</b> ready to use project (images, projection matrices and ini configuration file).");
         break;
     }
     QMessageBox::information(this, tr("Open MVG SfM GUI Help"), message);
@@ -237,8 +238,11 @@ void MatchingPage::failed_demo_download()
 {
     if (QDir(demo_dir).exists() == false)
     {
+        // If the download failed delete the initialised folder - otherwise git might fail.
+	imageset_dir.removeRecursively();
+	// Error output
 	txtReport->moveCursor (QTextCursor::End);
-	txtReport->insertPlainText (tr(" Download failed.\nPlease check your Internet connection.\nAlthough the demo files are not available, you can still use this program.\n"));
+	txtReport->insertPlainText (tr(" Download failed.\nPlease check your Internet connection. You can manually download the files by running \"git clone https://github.com/openMVG/ImageDataset_SceauxCastle.git\" in your \"openMVG_build/software/SfM\" folder.\nAlthough the demo files are not available, you can still use this program.\n"));
 	txtReport->moveCursor (QTextCursor::End);	
     }    
     check_demo_path();	
@@ -608,20 +612,28 @@ void PipelinePage::showEvent(QShowEvent*)
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
 
     // Have we been here before? Set the paths accordingly
-    if (field("PipelinePage_status").toString() == "init") {
-    InputPath->setText(json_dir);
-    OutputPath->setText(mvs_dir);
-    ImagesFolderPath->setText(input_dir_path);
-    StatusPipelinePage->setText("visited");
-    registerField("PipelinePage_status", StatusPipelinePage);
+    if (field("PipelinePage_status").toString() == "init") 
+    {
+	InputPath->setText(json_dir);
+	OutputPath->setText(mvs_dir);
+	ImagesFolderPath->setText(input_dir_path);
+	StatusPipelinePage->setText("visited");
+	registerField("PipelinePage_status", StatusPipelinePage);
     }
     // Have we finished here before? Set the buttons accordingly
-    if(field("PipelinePage_status").toString() == "finished") {
+    if(field("PipelinePage_status").toString() == "finished") 
+    {
 	wizard()->button(QWizard::NextButton)->setText(tr("Next >"));
     }
-    else {
-    wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
+    else 
+    {
+    	wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
     }	
+    // Is there a Preview path already? Enable Preview button
+    if (field("Preview_Pipeline").toString() != "")
+    {
+	wizard()->button(QWizard::CustomButton1)->setEnabled(true);	
+    }
 }
 
 // Event: Select Input path
@@ -1137,6 +1149,11 @@ int MVSSelectorPage::nextId() const
     return -1;
 }
 
+// What happens when we press back? Nuthin...
+void MVSSelectorPage::cleanupPage()
+{
+}
+
 // When Initializing page (use Show event instead of initialize page) set Text to "Skip" or "Next"
 void MVSSelectorPage::showEvent(QShowEvent*)
 {
@@ -1165,6 +1182,11 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     wizard()->button(QWizard::CancelButton)->QWidget::hide();
     // Do we want the preview button here? Naaahhh....
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
+    // Is there a Preview path already? Enable Preview button
+    if (field("Preview_MVS").toString() != "")
+    {
+	wizard()->button(QWizard::CustomButton1)->setEnabled(true);	
+    }
 }
 
 // Enable re-running

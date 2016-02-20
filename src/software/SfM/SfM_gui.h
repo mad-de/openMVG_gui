@@ -150,6 +150,7 @@ class MVSSelectorPage : public QWizardPage
 public:
     MVSSelectorPage(QWidget *parent = 0);
 
+    void cleanupPage();
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;
 

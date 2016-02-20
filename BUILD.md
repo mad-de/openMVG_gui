@@ -38,8 +38,6 @@ git clone https://github.com/cdcseacave/openMVS.git openMVS
 mkdir openMVS_build
 cd openMVS_build
 cmake . ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_DIR="$main_path/vcglib" -DOpenCV_CAN_BREAK_BINARY_COMPATIBILITY=OFF -DBUILD_SHARED_LIBS=ON
-
-#Install OpenMVS library:
 sudo make install
 ```
 # Usage example
