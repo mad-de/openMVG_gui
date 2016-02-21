@@ -62,7 +62,10 @@ private:
     QLabel *InputLabel;
     QLabel *CommandLabel;
     QProcess *process_command;
+    QGridLayout *main_grid;
+    QGridLayout *advanced_options;
     QGridLayout *input_fields;
+    QGridLayout *terminal_fields;
     QLabel *CameraSelLabel;
     QComboBox *CameraSel;
 };

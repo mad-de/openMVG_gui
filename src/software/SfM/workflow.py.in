@@ -37,6 +37,15 @@ else:
 CAMERA_SENSOR_WIDTH_DIRECTORY = "@OPENMVG_SOFTWARE_SFM_SRC_DIR@" + "/../../openMVG/exif/sensor_width_database"
 camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")
 
+# Catch errors
+def erroroutput (output, last_str, last_exec):
+ if (output):
+  return True;
+ else:
+  sys.stderr.write("An error occured during " + last_exec + ". The MVS process halted. Last command:\n");
+  sys.stderr.write("\"" + " ".join(str(x) for x in last_str) + "\"");
+  return False;
+
 if user_vars["step"] == "matching":
  # Indicate Input dir
  input_eval_dir = user_vars["inputpath"]
@@ -189,23 +198,17 @@ elif user_vars["step"] == "openMVS":
    os.mkdir(user_vars["output_dir"])
 
   # 1. Import
-  pMVSImport = subprocess.Popen([os.path.join(OPENMVS_BIN, "InterfaceOpenMVG"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs")])
+  curr_string = [ os.path.join(OPENMVS_BIN, "InterfaceOpenMVG"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs") ]
+  pMVSImport = subprocess.Popen(curr_string)
   pMVSImport.wait()
-
-  if os.path.exists(os.path.join(user_vars["output_dir"], "scene.mvs")):
-   still_working = 1;
-  else:
-    sys.stderr.write("An error occured during Import. The MVS process halted.");
-    still_working = 0;
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene.mvs")), curr_string, "InterfaceOpenMVG")
 
   # 2. Densify Point Cloud (optional)
-  if still_working == 1 and user_vars["use_densify"] == "ON":
-   pMVSDensify = subprocess.Popen( [os.path.join(OPENMVS_BIN, "DensifyPointCloud"),  "-i", os.path.join(user_vars["output_dir"], "scene.mvs"), "-o", os.path.join(user_vars["output_dir"], "scene_dense.mvs")] )
+  if still_working and user_vars["use_densify"] == "ON":
+   curr_string = [os.path.join(OPENMVS_BIN, "DensifyPointCloud"),  "-i", os.path.join(user_vars["output_dir"], "scene.mvs"), "-o", os.path.join(user_vars["output_dir"], "scene_dense.mvs")]
+   pMVSDensify = subprocess.Popen(curr_string)
    pMVSDensify.wait()
-
-   if not os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense.mvs")):
-    sys.stderr.write("An error occured during Densify. The MVS process halted.");
-    still_working = 0;
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense.mvs")), curr_string, "DensifyPointCloud")
 
   # 3. Reconstruct Meshes
   if user_vars["use_densify"] == "ON":
@@ -213,22 +216,18 @@ elif user_vars["step"] == "openMVS":
   else:
    this_input_file = "scene.mvs";
 
-  if still_working == 1:
-   pMVSReconstruct = subprocess.Popen( [os.path.join(OPENMVS_BIN, "ReconstructMesh"),  "-i", os.path.join(user_vars["output_dir"], this_input_file), "-o", os.path.join(user_vars["output_dir"], "scene_mesh.mvs")] )
+  if still_working:
+   curr_string = [os.path.join(OPENMVS_BIN, "ReconstructMesh"),  "-i", os.path.join(user_vars["output_dir"], this_input_file), "-o", os.path.join(user_vars["output_dir"], "scene_mesh.mvs")]
+   pMVSReconstruct = subprocess.Popen(curr_string)
    pMVSReconstruct.wait()
-
-   if not os.path.exists(os.path.join(user_vars["output_dir"], "scene_mesh.mvs")):
-    sys.stderr.write("An error occured during Reconstruct. The MVS process halted.");
-    still_working = 0;
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene_mesh.mvs")), curr_string, "ReconstructMesh")
 
   # 4. Refine Meshes (optional)
-  if still_working == 1 and user_vars["use_refine"] == "ON":
-   pMVSRefine = subprocess.Popen( [os.path.join(OPENMVS_BIN, "RefineMesh"),  "-i", os.path.join(user_vars["output_dir"], "scene_mesh.mvs"), "-o", os.path.join(user_vars["output_dir"], "scene_dense_mesh.mvs")] )
+  if still_working and user_vars["use_refine"] == "ON":
+   curr_string = [os.path.join(OPENMVS_BIN, "RefineMesh"),  "-i", os.path.join(user_vars["output_dir"], "scene_mesh.mvs"), "-o", os.path.join(user_vars["output_dir"], "scene_dense_mesh.mvs")]
+   pMVSRefine = subprocess.Popen(curr_string)
    pMVSRefine.wait()
-
-   if not os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh.mvs")):
-    sys.stderr.write("An error occured during Refine. The MVS process halted.");
-    still_working = 0;
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh.mvs")), curr_string, "RefineMesh")
 
   # 5. Texture Meshes
   if user_vars["use_refine"] == "ON":
@@ -236,15 +235,14 @@ elif user_vars["step"] == "openMVS":
   else:
    this_input_file = "scene_mesh.mvs";
 
-  if still_working == 1:
-   pMVSRefine = subprocess.Popen( [os.path.join(OPENMVS_BIN, "TextureMesh"),  "-i", os.path.join(user_vars["output_dir"], this_input_file), "-o", os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")] )
-   pMVSRefine.wait()
-
-   if os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")):
+  if still_working:
+   curr_string = [os.path.join(OPENMVS_BIN, "TextureMesh"),  "-i", os.path.join(user_vars["output_dir"], this_input_file), "-o", os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")]
+   pMVSTexture = subprocess.Popen(curr_string)
+   pMVSTexture.wait()
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")), curr_string, "TextureMesh")
+   if still_working:
     print "preview_path " + os.path.join(user_vars["output_dir"],"scene_dense_mesh_texture.ply end_path");
-    print "\n\n************************************************\nRunning openMVS complete.\nOutput folder: " + user_vars["output_dir"] + ".\nPress Finish to close program or check out the Preview.\n************************************************"
-   else:
-    sys.stderr.write("An error occured during Texturing. The MVS process halted.");
-
+    print "\n\n************************************************\nRunning openMVS complete.\nOutput folder: " + user_vars["output_dir"] + ".\nPress Finish to close the program or check out the Preview.\n************************************************"
+    
 else:
  pass

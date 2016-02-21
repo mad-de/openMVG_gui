@@ -141,6 +141,12 @@ MatchingPage::MatchingPage(QWidget *parent)
     CameraSel->QWidget::hide();
     CameraSelLabel->QWidget::hide();
 
+    // Set up main Layout
+    main_grid = new QGridLayout;  
+    input_fields = new QGridLayout;   
+    advanced_options = new QGridLayout;     
+    terminal_fields = new QGridLayout;    
+
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
     registerField("Matching_InputPath", InputPath);
 
@@ -150,22 +156,26 @@ MatchingPage::MatchingPage(QWidget *parent)
     input_fields->addWidget(btnInputPath, 0, 2);
     // General layout
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    input_fields->addWidget(AdvancedOptions, 1, 0, 1, 2);
-    input_fields->addWidget(CameraSelLabel, 2, 0);
-    input_fields->addWidget(CameraSel, 2, 1);
+    advanced_options->addWidget(AdvancedOptions, 0, 0, 1, 2);
+    advanced_options->addWidget(CameraSelLabel, 1, 0);
+    advanced_options->addWidget(CameraSel, 1, 1);
     CameraSel->setCurrentIndex(2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    input_fields->addWidget(TerminalMode, 3, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 2, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    input_fields->addWidget(command, 4, 0, 1, 3);
-    input_fields->addWidget(CommandLabel, 5, 0);    
-    input_fields->addWidget(btnProcess, 5, 2);
+    advanced_options->addWidget(command, 3, 0, 1, 3);
+    terminal_fields->addWidget(CommandLabel, 0, 0);  
+    terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    input_fields->addWidget(txtReport, 6, 0, 1, 3);
+    terminal_fields->addWidget(txtReport, 1, 0, 1, 9);
+
+    // Insert into main Layout
+    main_grid->addLayout(input_fields, 0, 0);
+    main_grid->addLayout(advanced_options, 1, 0);
+    main_grid->addLayout(terminal_fields, 2, 0);
 
     // Finalize
-    setLayout(input_fields);
-    input_fields->setAlignment(Qt::AlignBottom);
+    setLayout(main_grid);
 
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
