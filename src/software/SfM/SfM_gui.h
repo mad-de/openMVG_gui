@@ -49,6 +49,8 @@ private slots:
     void btnTerminalModeClicked();
     void fldcommandClicked();
     void on_CameraSel_changed();
+    void on_DescrPres_changed();
+    void on_DescrMeth_changed();
 
 private:
     QTimer* demo_download_timer;
@@ -68,6 +70,10 @@ private:
     QGridLayout *terminal_fields;
     QLabel *CameraSelLabel;
     QComboBox *CameraSel;
+    QLabel *DescrPresLabel;
+    QComboBox *DescrPres;
+    QLabel *DescrMethLabel;
+    QComboBox *DescrMeth;
 };
 
 // PAGE: Pipeline

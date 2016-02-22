@@ -10,7 +10,7 @@ QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 
-QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3";
+QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\"";
 
 QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3";
 
@@ -140,6 +140,20 @@ MatchingPage::MatchingPage(QWidget *parent)
     CameraSel->addItem(tr("Pinhole radial 3 (default)"), QVariant(3));
     CameraSel->QWidget::hide();
     CameraSelLabel->QWidget::hide();
+    DescrPresLabel = new QLabel(tr("[SfM_ComputeFeatures] Describer Preset:"));
+    DescrPres = new QComboBox;
+    DescrPres->addItem(tr("NORMAL"), QVariant(1));
+    DescrPres->addItem(tr("HIGH"), QVariant(2));
+    DescrPres->addItem(tr("ULTRA"), QVariant(3));
+    DescrPres->QWidget::hide();
+    DescrPresLabel->QWidget::hide();
+    DescrMethLabel = new QLabel(tr("[SfM_ComputeFeatures] Describer Method:"));
+    DescrMeth = new QComboBox;
+    DescrMeth->addItem(tr("SIFT"), QVariant(1));
+    DescrMeth->addItem(tr("AKAZE_FLOAT"), QVariant(2));
+    DescrMeth->addItem(tr("AKAZE_MLDB"), QVariant(3));
+    DescrMeth->QWidget::hide();
+    DescrMethLabel->QWidget::hide();
 
     // Set up main Layout
     main_grid = new QGridLayout;  
@@ -161,9 +175,16 @@ MatchingPage::MatchingPage(QWidget *parent)
     advanced_options->addWidget(CameraSel, 1, 1);
     CameraSel->setCurrentIndex(2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 2, 0, 1, 2);
+    advanced_options->addWidget(DescrPresLabel, 2, 0);
+    advanced_options->addWidget(DescrPres, 2, 1);
+    DescrPres->setCurrentIndex(0);
+    advanced_options->addWidget(DescrMethLabel, 3, 0);
+    advanced_options->addWidget(DescrMeth, 3, 1);
+    DescrPres->setCurrentIndex(0);
+    TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(TerminalMode, 4, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 3, 0, 1, 3);
+    advanced_options->addWidget(command, 5, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
     terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
@@ -184,6 +205,8 @@ MatchingPage::MatchingPage(QWidget *parent)
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
     connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MatchingPage::on_CameraSel_changed);
+    connect(DescrPres,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MatchingPage::on_DescrPres_changed);
+    connect(DescrMeth,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MatchingPage::on_DescrMeth_changed);
 }
 
 int MatchingPage::nextId() const
@@ -373,6 +396,10 @@ void MatchingPage::btnAdvancedOptionsClicked()
 	TerminalMode->QWidget::show();
 	CameraSel->QWidget::show();
 	CameraSelLabel->QWidget::show();
+	DescrPres->QWidget::show();
+	DescrPresLabel->QWidget::show();
+	DescrMeth->QWidget::show();
+	DescrMethLabel->QWidget::show();
     }
     else {
 	// Hide all the Advanced options + command
@@ -382,6 +409,10 @@ void MatchingPage::btnAdvancedOptionsClicked()
 	command->QWidget::hide();
 	CameraSel->QWidget::hide();
 	CameraSelLabel->QWidget::hide();
+	DescrPres->QWidget::hide();
+	DescrPresLabel->QWidget::hide();
+	DescrMeth->QWidget::hide();
+	DescrMethLabel->QWidget::hide();
     }
 }
 
@@ -417,7 +448,25 @@ void MatchingPage::on_CameraSel_changed()
     command->setText(str_commando);
 }
 
+// Event: Describer Preset changed
+void MatchingPage::on_DescrPres_changed()
+{
+    QString get_SelItem = DescrPres->currentText();
 
+    QString str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("descr_pres=\"([^\"]*)\""), "descr_pres=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+
+// Event: Describer Method changed
+void MatchingPage::on_DescrMeth_changed()
+{
+    QString get_SelItem = DescrMeth->currentText();
+
+    QString str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("descr_meth=\"([^\"]*)\""), "descr_meth=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
 // PAGE
 // Pipelines
 // PAGE

@@ -69,7 +69,7 @@ if user_vars["step"] == "matching":
  pIntrisics = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"]] )
  pIntrisics.wait()
  # 2. Compute features
- pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", "SIFT", "-f" , "1"] )
+ pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", user_vars["descr_meth"], "-f" , "1", "-p", user_vars["descr_pres"]] )
  pFeatures.wait()
 
  if os.path.exists(matches_dir+"/sfm_data.json"):
