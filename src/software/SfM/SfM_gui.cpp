@@ -10,9 +10,9 @@ QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 
-QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\"";
+QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
 
-QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
 
 QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
