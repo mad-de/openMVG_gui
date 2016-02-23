@@ -74,6 +74,7 @@ private:
     QComboBox *DescrPres;
     QLabel *DescrMethLabel;
     QComboBox *DescrMeth;
+    QProcess *process_preview_init;
 };
 
 // PAGE: Pipeline

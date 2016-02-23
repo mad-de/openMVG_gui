@@ -4,7 +4,7 @@
 
 #include "software/SfM/SfM_gui.h"
 
-// Initialize paths and filters for later use
+// Initialize paths string and filters for later use
 QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 
 QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
@@ -94,7 +94,7 @@ void OMVGguiWizard::showPreview()
         preview_file = field("Preview_Pipeline").toString();
     }
     QFile preview_path(preview_file);
-    QString preview_title = "Previewing file: " + QFileInfo(preview_path).fileName();
+    QString preview_title = tr("Previewing file: ") + QFileInfo(preview_path).fileName();
 
     QProcess *procPreview = new QProcess();
     QStringList arguments;
@@ -804,6 +804,14 @@ void PipelinePage::rightMessage()
 	txtReport->moveCursor (QTextCursor::End);
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
+     	// Run Preview 
+    	QFile preview_path(strdata_qstr);
+	QString preview_title = tr("Previewing file: ") + QFileInfo(preview_path).fileName();
+	QProcess *procPreview_init = new QProcess();
+	QStringList arguments;
+	arguments << "-i" << strdata_qstr << "-t" << preview_title;
+	QString preview_command = "./openMVG_SfM_gui_ply_preview";
+	procPreview_init->start(preview_command, arguments);
     }
     else
     {
@@ -1352,6 +1360,14 @@ void MVSSelectorPage::rightMessage()
 	txtReport->moveCursor (QTextCursor::End);
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
+     	// Run Preview 
+    	QFile preview_path(strdata_qstr);
+	QString preview_title = tr("Previewing file: ") + QFileInfo(preview_path).fileName();
+	QProcess *procPreview_init = new QProcess();
+	QStringList arguments;
+	arguments << "-i" << strdata_qstr << "-t" << preview_title;
+	QString preview_command = "./openMVG_SfM_gui_ply_preview";
+	procPreview_init->start(preview_command, arguments);
     }
     else
     {
