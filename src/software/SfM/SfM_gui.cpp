@@ -93,9 +93,12 @@ void OMVGguiWizard::showPreview()
     default:
         preview_file = field("Preview_Pipeline").toString();
     }
+    QFile preview_path(preview_file);
+    QString preview_title = "Previewing file: " + QFileInfo(preview_path).fileName();
+
     QProcess *procPreview = new QProcess();
     QStringList arguments;
-    arguments << preview_file << preview_file;
+    arguments << "-i" <<preview_file << "-t" << preview_title;
     QString preview_command = "./openMVG_SfM_gui_ply_preview";
     procPreview->start(preview_command, arguments);
 }
@@ -1340,8 +1343,8 @@ void MVSSelectorPage::rightMessage()
     QString strdata_qstr = strdata;
     QString strdata_qstr_output = strdata;
     if (strdata.contains("preview_path")) {
-	qDebug() << strdata_qstr.replace(QRegExp (".*preview_path"), "" );
-	qDebug() << strdata_qstr.replace(QRegExp ("end_path.*"), "" );
+	qDebug() << strdata_qstr.replace(QRegExp (".*preview_path "), "" );
+	qDebug() << strdata_qstr.replace(QRegExp (" end_path.*"), "" );
 	preview_mvs->setText(strdata_qstr);
 	registerField("Preview_MVS", preview_mvs);
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);

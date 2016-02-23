@@ -2,58 +2,87 @@
 #include <iostream>
 #include <pcl/io/io.h>
 #include <pcl/io/ply_io.h>
+#include <fstream>
+#include <string> 
+using namespace std;
     
 int user_data;
     
-void 
-viewerOneOff (pcl::visualization::PCLVisualizer& viewer)
+void viewerOneOff (pcl::visualization::PCLVisualizer& viewer)
 {
-    viewer.setBackgroundColor (0.0, 0.0, 0.0);
-/*    pcl::PointXYZ o;
-    o.x = 1.0;
-    o.y = 1.0;
-    o.z = 1.0;*/
-   
+    // Set Background to black
+    viewer.setBackgroundColor(0.0, 0.0, 0.0);
+
+    // Automatically set camera position - switch to manual camera position until viewer.removeOrientationMarkerWidgetAxes(); works.
+    // viewer.initCameraParameters();
+
+    // Manually set camera position 
+    double PositionX = 2;
+    double PositionY = 0;
+    double PositionZ = -2;
+    double FocalPointX = 1;
+    double FocalPointY = 0;
+    double FocalPointZ = 0;
+    double ViewUpX = 0;
+    double ViewUpY = -1;
+    double ViewUpZ = 0;
+    int Viewpoint = 0;
+    viewer.setCameraPosition(PositionX, PositionY, PositionZ, FocalPointX, FocalPointY, FocalPointZ, ViewUpX, ViewUpY, ViewUpZ, Viewpoint);
+    viewer.updateCamera(); 
 }
-/*    
-void 
-viewerPsycho (pcl::visualization::PCLVisualizer& viewer)
+
+void FileNotFound (pcl::visualization::PCLVisualizer& viewer)
 {
-    static unsigned count = 0;
-    std::stringstream ss;
-    ss << "Once per viewer loop: " << count++;
-    viewer.removeShape ("text", 0);
-    viewer.addText (ss.str(), 200, 300, "text", 0);
-    
+    viewer.addText ("Preview file could not be found.", 200, 300, "text", 0);
+}
+
+void viewerIteration (pcl::visualization::PCLVisualizer& viewer)
+{
     //FIXME: possible race condition here:
     user_data++;
 }
-  */
-  
-int
-main(int argc, char *argv[])
+
+bool fexists(const std::string& filename) {
+    ifstream ifile(filename.c_str());
+    if ( !ifile.is_open() ) { return false; }
+    else { return true; }
+}
+
+int main(int argc, char *argv[])
 {
-	
+    // Get the variables
+    string input_file, title;
+    for(unsigned i = 1; i != argc; i++)
+    { 
+	if (string(argv[i]) == "-i")
+	{
+	    input_file = string(argv[2]);
+	}
+	else if (string(argv[i]) == "-t")
+	{
+	    title = string(argv[4]);
+	}
+    }
+    // Generate Point Cloud Viewer
     pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-    pcl::io::loadPLYFile (argv[1], *cloud);
-    
-    pcl::visualization::CloudViewer viewer(argv[2]);
-    
+    pcl::io::loadPLYFile (input_file, *cloud);
+    pcl::visualization::CloudViewer viewer(title);
     //blocks until the cloud is actually rendered
     viewer.showCloud(cloud);
-    
-    //use the following functions to get access to the underlying more advanced/powerful
-    //PCLVisualizer
-    
-    //This will only get called once
-    viewer.runOnVisualizationThreadOnce (viewerOneOff);
+
+    if (!fexists(input_file))
+    {
+	viewer.runOnVisualizationThreadOnce (FileNotFound);
+    }
+    else
+    {
+	// call once
+	viewer.runOnVisualizationThreadOnce (viewerOneOff);
+    }
 
     while (!viewer.wasStopped ())
     {
-    //you can also do cool processing here
-    //FIXME: Note that this is running in a separate thread from viewerPsycho
-    //and you should guard against race conditions yourself...
-    user_data++;
+	user_data++;
     }
     return 0;
 }
