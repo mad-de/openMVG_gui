@@ -485,8 +485,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Set specific widgets
     PipelineSelLabel = new QLabel(tr("Select SfM solver:"));
     PipelineSel = new QComboBox;
-    PipelineSel->addItem(tr("Incremental (Standard) - Uses two pictures with best matches)"), QVariant(1));
-    PipelineSel->addItem(tr("Global"), QVariant(2));
+    PipelineSel->addItem(tr("Incremental - Starts with two pictures with the best matches)"), QVariant(1));
+    PipelineSel->addItem(tr("Global (Standard)"), QVariant(2));
     InputPath = new QLineEdit("");
     InputPath->QWidget::hide();
     OutputPath = new QLineEdit("");
