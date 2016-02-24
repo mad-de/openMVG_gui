@@ -12,7 +12,7 @@ QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/
 
 QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
 
-QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
 
 QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
@@ -28,6 +28,19 @@ int visited_matching = 0;
 
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
+
+// Global functions
+void launchPreview(QString preview_file)
+{
+    QFile preview_path(preview_file);
+    QString preview_title = "Previewing file: " + QFileInfo(preview_path).fileName();
+
+    QProcess *procPreview = new QProcess();
+    QStringList arguments;
+    arguments << "-i" <<preview_file << "-t" << preview_title;
+    QString preview_command = "./openMVG_SfM_gui_ply_preview";
+    procPreview->start(preview_command, arguments);
+}
 
 OMVGguiWizard::OMVGguiWizard(QWidget *parent)
     : QWizard(parent)
@@ -93,14 +106,7 @@ void OMVGguiWizard::showPreview()
     default:
         preview_file = field("Preview_Pipeline").toString();
     }
-    QFile preview_path(preview_file);
-    QString preview_title = tr("Previewing file: ") + QFileInfo(preview_path).fileName();
-
-    QProcess *procPreview = new QProcess();
-    QStringList arguments;
-    arguments << "-i" <<preview_file << "-t" << preview_title;
-    QString preview_command = "./openMVG_SfM_gui_ply_preview";
-    procPreview->start(preview_command, arguments);
+    launchPreview(preview_file);
 }
 
 // PAGE
@@ -251,7 +257,7 @@ void MatchingPage::showEvent(QShowEvent*)
     }
     else 
     {
-    wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
+    	wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
     }	
 
     // Do we need the cancel button here? I don't think so...
@@ -574,9 +580,9 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
     registerField(tr("Pipeline_OutputPath"), OutputPath);
     StatusPipelinePage = new QLineEdit("init");
-    registerField(tr("PipelinePage_status"), StatusPipelinePage);
+    registerField("PipelinePage_status", StatusPipelinePage);
     preview_pipeline = new QLineEdit;
-    registerField(tr("Preview_Pipeline"), preview_pipeline);
+    registerField("Preview_Pipeline", preview_pipeline);
 
     // Step specific layout
     input_fields->addWidget(PipelineSelLabel, 0 , 0);
@@ -696,6 +702,10 @@ void PipelinePage::showEvent(QShowEvent*)
     {
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);	
     }
+    else
+    {
+	wizard()->button(QWizard::CustomButton1)->setEnabled(false);	
+    }
 }
 
 // Event: Select Input path
@@ -769,6 +779,7 @@ void PipelinePage::btnProcessClicked()
 	btnProcess->setText(tr("working"));
 	btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(false);
+	wizard()->button(QWizard::CustomButton1)->setEnabled(false);	
 
 	QString str_command;
 	txtReport->clear();
@@ -805,13 +816,7 @@ void PipelinePage::rightMessage()
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
      	// Run Preview 
-    	QFile preview_path(strdata_qstr);
-	QString preview_title = tr("Previewing file: ") + QFileInfo(preview_path).fileName();
-	QProcess *procPreview_init = new QProcess();
-	QStringList arguments;
-	arguments << "-i" << strdata_qstr << "-t" << preview_title;
-	QString preview_command = "./openMVG_SfM_gui_ply_preview";
-	procPreview_init->start(preview_command, arguments);
+	launchPreview(strdata_qstr);
     }
     else
     {
@@ -1201,6 +1206,10 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
 
     // Finalize
     setLayout(main_grid);
+  
+   // Register fields
+    StatusMVSSelectorPage = new QLineEdit("init");
+    registerField("MVSSelectorPage_status", StatusMVSSelectorPage);
 
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
@@ -1228,7 +1237,8 @@ void MVSSelectorPage::cleanupPage()
 void MVSSelectorPage::showEvent(QShowEvent*)
 {
     // Have we been here before? Set the buttons accordingly
-    if(field("MVS_finished").toString() == "Finished") {
+    if(field("MVSSelectorPage_status").toString() == "finished") 
+    {
     	wizard()->button(QWizard::FinishButton)->setEnabled(true);
     }
     else
@@ -1257,12 +1267,17 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     {
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);	
     }
+    else
+    {
+	wizard()->button(QWizard::CustomButton1)->setEnabled(false);	
+    }
 }
 
 // Enable re-running
 void MVSSelectorPage::enable_rerunning()
 {
-    if (field("MVS_finished").toString() == "Finished") {
+    if (field("MVSSelectorPage_status").toString() == "finished") 
+    {
 	btnProcess->setText(tr("Run"));
 	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(true);
@@ -1361,13 +1376,7 @@ void MVSSelectorPage::rightMessage()
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
      	// Run Preview 
-    	QFile preview_path(strdata_qstr);
-	QString preview_title = tr("Previewing file: ") + QFileInfo(preview_path).fileName();
-	QProcess *procPreview_init = new QProcess();
-	QStringList arguments;
-	arguments << "-i" << strdata_qstr << "-t" << preview_title;
-	QString preview_command = "./openMVG_SfM_gui_ply_preview";
-	procPreview_init->start(preview_command, arguments);
+    	launchPreview(strdata_qstr);
     }
     else
     {
@@ -1378,8 +1387,9 @@ void MVSSelectorPage::rightMessage()
     if (strdata.contains("Press Finish to close")) {
     	wizard()->button(QWizard::FinishButton)->setEnabled(true);
 	wizard()->button(QWizard::BackButton)->setEnabled(true);
-	btnProcess->setText("Finished");
-	registerField("MVS_finished", btnProcess);
+	btnProcess->setText(tr("Finished"));
+   	StatusMVSSelectorPage->setText("finished");
+	registerField("MVSSelectorPage_status", StatusMVSSelectorPage);
     }
 }
 

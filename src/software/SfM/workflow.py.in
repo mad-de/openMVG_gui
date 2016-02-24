@@ -103,7 +103,7 @@ elif user_vars["step"] == "sfm_solver":
   # - g; f: Fundamental matrix filtering e: Essential matrix filtering (all the image must have the same known focal length) h: Homography matrix filtering
  if user_vars["solver"] == "2":
   # GLOBAL: Compute matches
-  pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"]] )
+  pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"]] )
   pMatches.wait()
 
   reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")

@@ -179,6 +179,7 @@ private slots:
     void enable_rerunning();
 
 private:
+    QLineEdit *StatusMVSSelectorPage;
     QLabel *InputLabel;
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
