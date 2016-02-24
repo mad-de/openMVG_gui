@@ -100,7 +100,7 @@ elif user_vars["step"] == "sfm_solver":
 
   # Reconstruction for the global SfM pipeline
   # - global SfM pipeline use matches filtered by the essential matrices
-  # - g; f: Fundamental matrix filtering e: Essential matrix filtering (all the image must have the same known focal length) h: Homography matrix filtering
+  # - g; f: Fundamental matrix filtering e: Essential matrix filtering h: Homography matrix filtering
  if user_vars["solver"] == "2":
   # GLOBAL: Compute matches
   pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"]] )

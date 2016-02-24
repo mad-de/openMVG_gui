@@ -548,7 +548,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Global-specific
     MatrixSelLabel = new QLabel(tr("[GLOBAL] Matrix Filtering:"));
     MatrixSel = new QComboBox;
-    MatrixSel->addItem(tr("Essential matrix filtering (same focal length)"), QVariant(1));
+    MatrixSel->addItem(tr("Essential matrix filtering (Standard)"), QVariant(1));
     MatrixSel->addItem(tr("Fundamental matrix filtering"), QVariant(2));
     MatrixSel->addItem(tr("Homography matrix filtering"), QVariant(3));
     MatrixSel->QWidget::hide();
