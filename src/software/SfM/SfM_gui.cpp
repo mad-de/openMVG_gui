@@ -117,7 +117,7 @@ MatchingPage::MatchingPage(QWidget *parent)
     : QWizardPage(parent)
 {
     // Set page title and content
-    setTitle(tr("Step 1: Image matching & feature computing"));
+    setTitle(tr("Step 1: Image listing & feature computing"));
     setSubTitle(tr("Please select the folder containing your images and press \"Run\""));
    
     // Initialize Widgets

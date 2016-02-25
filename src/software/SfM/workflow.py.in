@@ -42,7 +42,7 @@ def erroroutput (output, last_str, last_exec):
  if (output):
   return True;
  else:
-  sys.stderr.write("An error occured during " + last_exec + ". The MVS process halted. Last command:\n");
+  sys.stderr.write("An error occured during " + last_exec + ". The process halted. Last command:\n");
   sys.stderr.write("\"" + " ".join(str(x) for x in last_str) + "\"");
   return False;
 
@@ -50,8 +50,10 @@ if user_vars["step"] == "matching":
  # Indicate Input dir
  input_eval_dir = user_vars["inputpath"]
  # Check if last character is a / and if so cut output dir by 1 and append _out
- if user_vars["inputpath"].endswith('/'): output_eval_dir = os.path.join(user_vars["inputpath"][:-1] + "_out")
- else: output_eval_dir = os.path.join(user_vars["inputpath"] + "_out")
+ if user_vars["inputpath"].endswith('/'): 
+  output_eval_dir = os.path.join(user_vars["inputpath"][:-1] + "_out")
+ else: 
+  output_eval_dir = os.path.join(user_vars["inputpath"] + "_out")
  if not os.path.exists(output_eval_dir):
   os.mkdir(output_eval_dir)
 
@@ -66,111 +68,133 @@ if user_vars["step"] == "matching":
 
  # -c = 3 = default pinhole camera
  # 1. Image listing - generate sfm_data.json
- pIntrisics = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"]] )
+ curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"] ]
+ pIntrisics = subprocess.Popen(curr_string)
  pIntrisics.wait()
+ still_working = erroroutput(os.path.exists(os.path.join(matches_dir, "sfm_data.json")), curr_string, "SfMInit_ImageListing")
+ 
  # 2. Compute features
- pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", user_vars["descr_meth"], "-f" , user_vars["force"], "-p", user_vars["descr_pres"]] )
- pFeatures.wait()
-
- if os.path.exists(matches_dir+"/sfm_data.json"):
-  print "\n\n************************************************\nMatching complete. Press Next to continue.\n************************************************"
- else:
-  print "Something went wrong :/";
+ if still_working:
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", user_vars["descr_meth"], "-f" , user_vars["force"], "-p", user_vars["descr_pres"] ]
+  pFeatures = subprocess.Popen(curr_string)
+  pFeatures.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(matches_dir, "image_describer.json")), curr_string, "ComputeFeratures")
+  if still_working:
+   print "\n\n************************************************\nMatching complete. Press Next to continue.\n************************************************"
 
 elif user_vars["step"] == "sfm_solver":
  output_eval_dir = user_vars["inputpath"][:-8]
+
  # Incremental sfm solver
  if user_vars["solver"] == "1":
   #  SEQUENTIAL: Compute matches -r = ratio (0.8 is recommended) -f = force to recompute data every time
-  pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-f", user_vars["force"]] )
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-f", user_vars["force"] ]
+  pMatches = subprocess.Popen(curr_string)
   pMatches.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
 
-  reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
-  # SEQUENTIAL: Reconstruction 
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir, "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ] )
-  pRecons.wait()
-
-  # SEQUENTIAL: Colorize Structure
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")] )
-  pRecons.wait()
-
-  # 3.4 SEQUENTIAL: Structure from Known Poses (robust triangulation)
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")] )
-  pRecons.wait()
+  if still_working:
+   # SEQUENTIAL: Reconstruction 
+   reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
+   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir, "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ]
+   pRecons = subprocess.Popen(curr_string)
+   pRecons.wait()
+   still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir, "sfm_data.json")), curr_string, "IncrementalSfM")
 
   # Reconstruction for the global SfM pipeline
   # - global SfM pipeline use matches filtered by the essential matrices
   # - g; f: Fundamental matrix filtering e: Essential matrix filtering h: Homography matrix filtering
  if user_vars["solver"] == "2":
   # GLOBAL: Compute matches
-  pMatches = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"]] )
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"] ]
+  pMatches = subprocess.Popen(curr_string)
   pMatches.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
 
-  reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
-  # GLOBAL: Reconstruction
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir ] )
-  pRecons.wait()
+  if still_working:
+   # GLOBAL: Reconstruction
+   reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
+   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir ]
+   pRecons = subprocess.Popen(curr_string)
+   pRecons.wait()
+   still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir, "sfm_data.json")), curr_string, "GlobalSfM")
 
-  # GLOBAL: Colorize Structure
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")] )
-  pRecons.wait()
+ # SHARED by Global & Incremental Pipeline
+ if still_working:
+  # Colorize Structure
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")]
+  pColorize = subprocess.Popen(curr_string)
+  pColorize.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir,"colorized.ply")), curr_string, "ComputeSfM_DataColor")
 
-  # 4.4 GLOBAL: Structure from Known Poses (robust triangulation)
-  pRecons = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")] )
-  pRecons.wait()
-
- if os.path.exists(os.path.join(reconstruction_dir,"robust.ply")):
+ if still_working:
+  # Structure from Known Poses (robust triangulation)
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")]
+  pRobust = subprocess.Popen(curr_string)
+  pRobust.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir,"robust.ply")), curr_string, "ComputeStructureFromKnownPoses")
+ 
+ if still_working:
   print "preview_path " + os.path.join(reconstruction_dir,"robust.ply end_path");
   print "mvs_output_path " + os.path.join(reconstruction_dir," end_path");
   print "\n\n************************************************\nMatching complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
- else:
-  print "Something went wrong :/";
 
 elif user_vars["step"] == "pmvs":
- pPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
+ curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"] ]
+ pPMVS = subprocess.Popen(curr_string)
  pPMVS.wait()
+ still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/pmvs_options.txt")), curr_string, "openMVG2PMVS")
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
   sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.");
-  sys.stderr.write("PMVS output path: " + user_vars["output_dir"]);
- else: 
+  sys.stderr.write("PMVS output path: " + user_vars["output_dir"] + "/PMVS/");
 
-  pPMVS2 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "pmvs_options.txt"] )
-  pPMVS2.wait()
-  if os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply")):
+ else: 
+  if still_working:
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "pmvs_options.txt"]
+   pPMVS2 = subprocess.Popen(curr_string)
+   pPMVS2.wait()
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply")), curr_string, "pmvs2")
+
+  if still_working:
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply end_path");
    print "\n\n************************************************\nRunning PMVS complete.\nOutput file: " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply") + "\nPress Finish to close the program or press Preview to check out the preview.\n************************************************"
-  else:
-   sys.stderr.write("An error occured during running PMVS. The process halted.");
 
 elif user_vars["step"] == "cmvs":
- pPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
- pPMVS.wait()
+ curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]]
+ pCMVS = subprocess.Popen(curr_string)
+ pCMVS.wait()
+ still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/pmvs_options.txt")), curr_string, "openMVG2PMVS")
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
   sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.");
   sys.stderr.write("PMVS output path:" + user_vars["output_dir"]);
  else: 
+  if still_working:
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "[MaxImageCountByCluster=100]"]
+   pPMVS2 = subprocess.Popen(curr_string)
+   pPMVS2.wait()
 
-  pPMVS2 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "[MaxImageCountByCluster=100]"] )
-  pPMVS2.wait()
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "30"]
+   pPMVS3 = subprocess.Popen(curr_string)
+   pPMVS3.wait()
 
-  pPMVS3 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "30"] )
-  pPMVS3.wait()
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "genOption"), os.path.join(user_vars["output_dir"], "PMVS/")]
+   pGenOption = subprocess.Popen(curr_string)
+   pGenOption.wait()
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/option-0000")), curr_string, "cmvs genOption")
 
-  pGenOption = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "genOption"), os.path.join(user_vars["output_dir"], "PMVS/")] )
-  pGenOption.wait()
+  if still_working:
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "option-0000"]
+   pPMVS4 = subprocess.Popen(curr_string)
+   pPMVS4.wait()
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply")), curr_string, "pmvs2")
 
-  pPMVS4 = subprocess.Popen( [os.path.join(OPENMVG_PMVS_BIN, "pmvs2"), os.path.join(user_vars["output_dir"], "PMVS/"), "option-0000"] )
-  pPMVS4.wait()
-
-  if os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply")):
+  if still_working:
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply end_path");
    print "\n\n************************************************\nRunning CMVS complete.\nOutput file: " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply") + "\nPress Finish to close the program or press Preview check out the preview.\n************************************************"
-  else:
-   sys.stderr.write("An error occured during running CMVS. The process halted.");
 
 elif user_vars["step"] == "cmpmvs":
  pCMPMVS = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2CMPMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"]] )
