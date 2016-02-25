@@ -9,12 +9,6 @@ import subprocess
 import sys
 import re
 
-# Define global vars
-
-def get_parent_dir(directory):
-    import os
-    return os.path.dirname(directory)
-
 # Initialize vars
 total_output = "Workflow finished.";
 user_vars = { };
@@ -46,6 +40,17 @@ def erroroutput (output, last_str, last_exec):
   sys.stderr.write("\"" + " ".join(str(x) for x in last_str) + "\"");
   return False;
 
+# Rename matches files
+def rename_matches(char_in, solver, folder):
+ if solver == "1":
+  char_out = "f"
+ elif solver == "2":
+  char_out = "e"
+ if char_in != char_out:
+  filename_in = os.path.join(folder, "matches." + char_in + ".txt")
+  filename_out = os.path.join(folder, "matches." + char_out + ".txt")
+  os.rename(filename_in, filename_out)
+
 if user_vars["step"] == "comp_features":
  # Indicate Input dir
  input_eval_dir = user_vars["inputpath"]
@@ -57,17 +62,13 @@ if user_vars["step"] == "comp_features":
  if not os.path.exists(output_eval_dir):
   os.mkdir(output_eval_dir)
 
- input_dir = input_eval_dir
- output_dir = output_eval_dir
-    
- matches_dir = os.path.join(output_dir, "matches")
-
  # Create the ouput/matches folder if not present
+ matches_dir = os.path.join(output_eval_dir, "matches")
  if not os.path.exists(matches_dir):
   os.mkdir(matches_dir)
 
  # 1. Image listing - generate sfm_data.json
- curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"] ]
+ curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_eval_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"] ]
  pIntrisics = subprocess.Popen(curr_string)
  pIntrisics.wait()
  still_working = erroroutput(os.path.exists(os.path.join(matches_dir, "sfm_data.json")), curr_string, "SfMInit_ImageListing")
@@ -94,6 +95,9 @@ elif user_vars["step"] == "sfm_solver":
  pMatches = subprocess.Popen(curr_string)
  pMatches.wait()
  still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
+
+ # Rename output file to work with SfM pipeline
+ rename_matches(user_vars["matrix_filter"], user_vars["solver"], user_vars["inputpath"])
 
  # SEQUENTIAL: Reconstruction 
  if still_working:
