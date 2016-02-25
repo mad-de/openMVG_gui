@@ -14,7 +14,7 @@ class OMVGguiWizard : public QWizard
     Q_OBJECT
 
 public:
-    enum { Page_Matching, Page_Pipeline, Page_MVSSelector};
+    enum { Page_Comp_Features, Page_Pipeline, Page_MVSSelector};
 
     OMVGguiWizard(QWidget *parent = 0);
 
@@ -25,14 +25,14 @@ private:
     QProcess *process_preview;
 };
 
-// PAGE: Matching
+// PAGE: Compute Features
 
-class MatchingPage : public QWizardPage
+class Comp_FeaturesPage : public QWizardPage
 {
     Q_OBJECT
 
 public:
-    MatchingPage(QWidget *parent = 0);
+    Comp_FeaturesPage(QWidget *parent = 0);
 
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;

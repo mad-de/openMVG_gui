@@ -10,7 +10,7 @@ QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 
-QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
+QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
 
 QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
 
@@ -24,7 +24,7 @@ QFile Ktxt(parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software
 QFile Readmetxt (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/Readme.txt");
 QString demo_path (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/");
 // Ugly: use int not to call download over and over again
-int visited_matching = 0;
+int visited_comp_features = 0;
 
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
@@ -45,11 +45,11 @@ void launchPreview(QString preview_file)
 OMVGguiWizard::OMVGguiWizard(QWidget *parent)
     : QWizard(parent)
 {
-    setPage(Page_Matching, new MatchingPage);
+    setPage(Page_Comp_Features, new Comp_FeaturesPage);
     setPage(Page_Pipeline, new PipelinePage);
     setPage(Page_MVSSelector, new MVSSelectorPage);
 
-    setStartId(Page_Matching);
+    setStartId(Page_Comp_Features);
 
     // Mac stuff (for multi-platform approach)
     #ifndef Q_OS_MAC
@@ -76,7 +76,7 @@ void OMVGguiWizard::showHelp()
     QString message;
 
     switch (currentId()) {
-    case Page_Matching:
+    case Page_Comp_Features:
         message = tr("This step will process all Images in the selected folder to prepare them for the next steps.<br>In the bottom part of the window you will see the commandline with the command that will be processed. Feel free to change the parameters transmitted to the terminal at a later stage. To start the process Select the folder containing ALL images and press run. Wait until process is finished.<br> If you have already processed the files you want to work on, you can skip this step by clicking Next Button and resume with another step.");
         break;
     case Page_Pipeline:
@@ -110,10 +110,10 @@ void OMVGguiWizard::showPreview()
 }
 
 // PAGE
-// MATCHING
+// Compute Features
 // PAGE
 
-MatchingPage::MatchingPage(QWidget *parent)
+Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     : QWizardPage(parent)
 {
     // Set page title and content
@@ -132,7 +132,7 @@ MatchingPage::MatchingPage(QWidget *parent)
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
     AdvancedOptions = new QCheckBox(tr("Advanced Options"));
     command = new QLineEdit("init");
-    command = new QLineEdit(initialcommandline_matching);
+    command = new QLineEdit(initialcommandline_comp_features);
     command->setStyleSheet("color: #ffffff; background-color: #300a24;");
     command->setEnabled(false);
     command->QWidget::hide();
@@ -171,7 +171,7 @@ MatchingPage::MatchingPage(QWidget *parent)
     terminal_fields = new QGridLayout;    
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
-    registerField("Matching_InputPath", InputPath);
+    registerField("Comp_Features_InputPath", InputPath);
 
     // Step specific layout
     input_fields->addWidget(InputLabel, 0, 0);
@@ -213,20 +213,20 @@ MatchingPage::MatchingPage(QWidget *parent)
     connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
-    connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MatchingPage::on_CameraSel_changed);
-    connect(DescrPres,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MatchingPage::on_DescrPres_changed);
-    connect(DescrMeth,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MatchingPage::on_DescrMeth_changed);
+    connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_CameraSel_changed);
+    connect(DescrPres,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_DescrPres_changed);
+    connect(DescrMeth,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_DescrMeth_changed);
 }
 
-int MatchingPage::nextId() const
+int Comp_FeaturesPage::nextId() const
 {
   return OMVGguiWizard::Page_Pipeline;
 }
 
 // When Initializing page (use Show event instead of initialize page) set Text to "Skip" or "Next"
-void MatchingPage::showEvent(QShowEvent*)
+void Comp_FeaturesPage::showEvent(QShowEvent*)
 {
-    if ((QDir(demo_dir).exists() == false) and visited_matching == 0)
+    if ((QDir(demo_dir).exists() == false) and visited_comp_features == 0)
      {
 	wizard()->button(QWizard::NextButton)->setEnabled(false);
 	btnProcess->setText(tr("working"));
@@ -244,14 +244,14 @@ void MatchingPage::showEvent(QShowEvent*)
     	demo_download_timer->setSingleShot(true);
         demo_download_timer->start(20000);
     	connect(demo_download_timer, SIGNAL(timeout()), SLOT(failed_demo_download()));
-        visited_matching = 1;
+        visited_comp_features = 1;
      }
      else
      {
 	check_demo_path();
      }
     // Have we been here before? Set the buttons accordingly
-    if(field("Matching_finished").toString() == "false")
+    if(field("Comp_Features_finished").toString() == "false")
     {
 	wizard()->button(QWizard::NextButton)->setText(tr("Next >"));
     }
@@ -266,7 +266,7 @@ void MatchingPage::showEvent(QShowEvent*)
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
 }
 
-void MatchingPage::finished_demo_download()
+void Comp_FeaturesPage::finished_demo_download()
 {
     if (QDir(demo_dir).exists() == true)
     {
@@ -276,7 +276,7 @@ void MatchingPage::finished_demo_download()
         check_demo_path();	
     } 
 }
-void MatchingPage::failed_demo_download()
+void Comp_FeaturesPage::failed_demo_download()
 {
     if (QDir(demo_dir).exists() == false)
     {
@@ -289,7 +289,7 @@ void MatchingPage::failed_demo_download()
     }    
     check_demo_path();	
 }
-void MatchingPage::check_demo_path()
+void Comp_FeaturesPage::check_demo_path()
 {
     if((Ktxt.exists()) or (Readmetxt.exists()))
     {
@@ -307,7 +307,7 @@ void MatchingPage::check_demo_path()
 	else
 	{
 	txtReport->moveCursor (QTextCursor::End);
-	txtReport->insertPlainText (tr("Arrgh! I failed to delete some extra text files in the /images folder. But you can safely ignore these warnings during matching. Have fun playing around."));
+	txtReport->insertPlainText (tr("Arrgh! I failed to delete some extra text files in the /images folder. But you can safely ignore these warnings during feature computing. Have fun playing around."));
 	txtReport->moveCursor (QTextCursor::End);
 	}
      }
@@ -318,7 +318,7 @@ void MatchingPage::check_demo_path()
 }
 
 // Event: Select Input path
-void MatchingPage::btnInputPathClicked()
+void Comp_FeaturesPage::btnInputPathClicked()
 {
     QString str_get_commando;
 
@@ -341,7 +341,7 @@ void MatchingPage::btnInputPathClicked()
     command->setText(str_commando);
 
     // Have we been here before? Enable re-running
-    if(field("Matching_finished").toString() == "false") {
+    if(field("Comp_Features_finished").toString() == "false") {
 	btnProcess->setText(tr("Run"));
 	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(true);
@@ -349,7 +349,7 @@ void MatchingPage::btnInputPathClicked()
 }
 
 // Event: Click Run
-void MatchingPage::btnProcessClicked()
+void Comp_FeaturesPage::btnProcessClicked()
 {
     // Disable Skip button + Run Button
     wizard()->button(QWizard::NextButton)->setEnabled(false);
@@ -368,7 +368,7 @@ void MatchingPage::btnProcessClicked()
 }
 
 // Handle regular output
-void MatchingPage::rightMessage()
+void Comp_FeaturesPage::rightMessage()
 {
     QByteArray strdata = process_command->readAllStandardOutput();
     txtReport->moveCursor (QTextCursor::End);
@@ -378,12 +378,12 @@ void MatchingPage::rightMessage()
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Next >");
     btnProcess->setText(tr("Finished"));
-    registerField("Matching_finished", btnProcess);
+    registerField("Comp_Features_finished", btnProcess);
     }
 }
 
 // Handle error messages
-void MatchingPage::wrongMessage()
+void Comp_FeaturesPage::wrongMessage()
 {
     QByteArray strdata = process_command->readAllStandardError();
     txtReport->setTextColor(Qt::red);
@@ -397,7 +397,7 @@ void MatchingPage::wrongMessage()
 }
 
 // Event: Advanced Options clicked
-void MatchingPage::btnAdvancedOptionsClicked()
+void Comp_FeaturesPage::btnAdvancedOptionsClicked()
 {
     if (AdvancedOptions->checkState() == Qt::Checked) {
 	//Show all the Advanced Options
@@ -426,7 +426,7 @@ void MatchingPage::btnAdvancedOptionsClicked()
 }
 
 // Event: Terminal Mode clicked
-void MatchingPage::btnTerminalModeClicked()
+void Comp_FeaturesPage::btnTerminalModeClicked()
 {
     if (TerminalMode->checkState() == Qt::Checked) {
 	command->setEnabled(true);
@@ -439,7 +439,7 @@ void MatchingPage::btnTerminalModeClicked()
 }
 
 // Event: Field command changed --> Enable run (Assume, whoever clicks that knows what he's doing)
-void MatchingPage::fldcommandClicked()
+void Comp_FeaturesPage::fldcommandClicked()
 {
     btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
@@ -448,7 +448,7 @@ void MatchingPage::fldcommandClicked()
 
 
 // Event: Camera type changed
-void MatchingPage::on_CameraSel_changed()
+void Comp_FeaturesPage::on_CameraSel_changed()
 {
     QString get_SelItem = CameraSel->itemData(CameraSel->currentIndex()).toString();
 
@@ -458,7 +458,7 @@ void MatchingPage::on_CameraSel_changed()
 }
 
 // Event: Describer Preset changed
-void MatchingPage::on_DescrPres_changed()
+void Comp_FeaturesPage::on_DescrPres_changed()
 {
     QString get_SelItem = DescrPres->currentText();
 
@@ -468,7 +468,7 @@ void MatchingPage::on_DescrPres_changed()
 }
 
 // Event: Describer Method changed
-void MatchingPage::on_DescrMeth_changed()
+void Comp_FeaturesPage::on_DescrMeth_changed()
 {
     QString get_SelItem = DescrMeth->currentText();
 
@@ -663,7 +663,7 @@ void PipelinePage::cleanupPage()
 void PipelinePage::showEvent(QShowEvent*)
 {
     // Insert field values
-    QString input_dir_path = field("Matching_InputPath").toString();
+    QString input_dir_path = field("Comp_Features_InputPath").toString();
     QString output_dir = input_dir_path.mid(0, input_dir_path.length()-1) + "_out/";
     QString json_dir = output_dir + "matches/";
     QString mvs_dir = output_dir + "reconstruction_global/";
@@ -925,7 +925,7 @@ void PipelinePage::on_solverImage1Button_clicked()
 {
     QString str_get_basepath;
 
-    str_get_basepath = field("Matching_InputPath").toString();
+    str_get_basepath = field("Comp_Features_InputPath").toString();
 
     QString file = QFileDialog::getOpenFileName(
     this,
@@ -955,7 +955,7 @@ void PipelinePage::on_solverImage2Button_clicked()
 {
     QString str_get_basepath;
 
-    str_get_basepath = field("Matching_InputPath").toString();
+    str_get_basepath = field("Comp_Features_InputPath").toString();
 
     QString file = QFileDialog::getOpenFileName(
     this,

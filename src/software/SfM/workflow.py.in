@@ -46,7 +46,7 @@ def erroroutput (output, last_str, last_exec):
   sys.stderr.write("\"" + " ".join(str(x) for x in last_str) + "\"");
   return False;
 
-if user_vars["step"] == "matching":
+if user_vars["step"] == "comp_features":
  # Indicate Input dir
  input_eval_dir = user_vars["inputpath"]
  # Check if last character is a / and if so cut output dir by 1 and append _out
@@ -66,7 +66,6 @@ if user_vars["step"] == "matching":
  if not os.path.exists(matches_dir):
   os.mkdir(matches_dir)
 
- # -c = 3 = default pinhole camera
  # 1. Image listing - generate sfm_data.json
  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"] ]
  pIntrisics = subprocess.Popen(curr_string)
@@ -80,7 +79,7 @@ if user_vars["step"] == "matching":
   pFeatures.wait()
   still_working = erroroutput(os.path.exists(os.path.join(matches_dir, "image_describer.json")), curr_string, "ComputeFeratures")
   if still_working:
-   print "\n\n************************************************\nMatching complete. Press Next to continue.\n************************************************"
+   print "\n\n************************************************\nComputing features complete. Press Next to continue.\n************************************************"
 
 elif user_vars["step"] == "sfm_solver":
  output_eval_dir = user_vars["inputpath"][:-8]
@@ -129,7 +128,7 @@ elif user_vars["step"] == "sfm_solver":
  if still_working:
   print "preview_path " + os.path.join(reconstruction_dir,"robust.ply end_path");
   print "mvs_output_path " + os.path.join(reconstruction_dir," end_path");
-  print "\n\n************************************************\nMatching complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
+  print "\n\n************************************************\nSfM Pipeline complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
 
 elif user_vars["step"] == "pmvs":
  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"] ]
@@ -139,8 +138,8 @@ elif user_vars["step"] == "pmvs":
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
-  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.");
-  sys.stderr.write("PMVS output path: " + user_vars["output_dir"] + "/PMVS/");
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.\n");
+  sys.stderr.write("PMVS output path: " + user_vars["output_dir"] + "PMVS/");
 
  else: 
   if still_working:
@@ -161,8 +160,8 @@ elif user_vars["step"] == "cmvs":
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
-  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.");
-  sys.stderr.write("PMVS output path:" + user_vars["output_dir"]);
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.\n");
+  sys.stderr.write("PMVS output path:" + user_vars["output_dir"] + "PMVS/");
  else: 
   if still_working:
    curr_string = [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "[MaxImageCountByCluster=100]"]
@@ -201,7 +200,7 @@ elif user_vars["step"] == "mve":
 elif user_vars["step"] == "openMVS":
  # Check if openMVS path exists - if not terminate
  if not os.path.exists(OPENMVS_BIN):
-  sys.stderr.write("The OpenMVS binary files couldn't be found. Please check if openMVS is installed correctly in the /openMVS_build/bin folder.");
+  sys.stderr.write("The OpenMVS binary files couldn't be found. Please check if openMVS is installed correctly. You can set a costum path with the \"-DOPENMVS_BIN_PATH\" variable during building.");
  else:  
   # Check if necessary vars are set
   if not "use_densify" in user_vars:
