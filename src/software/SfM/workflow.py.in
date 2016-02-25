@@ -85,50 +85,42 @@ if user_vars["step"] == "matching":
 elif user_vars["step"] == "sfm_solver":
  output_eval_dir = user_vars["inputpath"][:-8]
 
- # Incremental sfm solver
  if user_vars["solver"] == "1":
-  #  SEQUENTIAL: Compute matches -r = ratio (0.8 is recommended) -f = force to recompute data every time
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-f", user_vars["force"] ]
-  pMatches = subprocess.Popen(curr_string)
-  pMatches.wait()
-  still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
+  reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
+ elif user_vars["solver"] == "2":
+  reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
 
-  if still_working:
-   # SEQUENTIAL: Reconstruction 
-   reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
-   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir, "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ]
+ # SHARED: Compute matches
+ curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"] ]
+ pMatches = subprocess.Popen(curr_string)
+ pMatches.wait()
+ still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
+
+ # SEQUENTIAL: Reconstruction 
+ if still_working:
+  if user_vars["solver"] == "1":
+   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", reconstruction_dir, "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ]
    pRecons = subprocess.Popen(curr_string)
    pRecons.wait()
    still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir, "sfm_data.json")), curr_string, "IncrementalSfM")
 
-  # Reconstruction for the global SfM pipeline
-  # - global SfM pipeline use matches filtered by the essential matrices
-  # - g; f: Fundamental matrix filtering e: Essential matrix filtering h: Homography matrix filtering
- if user_vars["solver"] == "2":
-  # GLOBAL: Compute matches
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"] ]
-  pMatches = subprocess.Popen(curr_string)
-  pMatches.wait()
-  still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
-
-  if still_working:
-   # GLOBAL: Reconstruction
-   reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
-   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", user_vars["inputpath"]+"sfm_data.json", "-m", user_vars["inputpath"], "-o", reconstruction_dir ]
+ # GLOBAL: Reconstruction
+ if still_working:
+  if user_vars["solver"] == "2":
+   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", reconstruction_dir ]
    pRecons = subprocess.Popen(curr_string)
    pRecons.wait()
    still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir, "sfm_data.json")), curr_string, "GlobalSfM")
 
- # SHARED by Global & Incremental Pipeline
+ # SHARED: Colorize Structure
  if still_working:
-  # Colorize Structure
   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")]
   pColorize = subprocess.Popen(curr_string)
   pColorize.wait()
   still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir,"colorized.ply")), curr_string, "ComputeSfM_DataColor")
 
  if still_working:
-  # Structure from Known Poses (robust triangulation)
+  # SHARED: Structure from Known Poses (robust triangulation)
   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")]
   pRobust = subprocess.Popen(curr_string)
   pRobust.wait()

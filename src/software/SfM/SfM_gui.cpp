@@ -12,7 +12,7 @@ QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/
 
 QString initialcommandline_matching = "python ../software/SfM/workflow.py step=\"matching\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
 
-QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
 
 QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
@@ -548,8 +548,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Global-specific
     MatrixSelLabel = new QLabel(tr("[GLOBAL] Matrix Filtering:"));
     MatrixSel = new QComboBox;
-    MatrixSel->addItem(tr("Essential matrix filtering (Standard)"), QVariant(1));
-    MatrixSel->addItem(tr("Fundamental matrix filtering"), QVariant(2));
+    MatrixSel->addItem(tr("Essential matrix filtering (Standard for GlobalSfM)"), QVariant(1));
+    MatrixSel->addItem(tr("Fundamental matrix filtering (Standard for IncrementalSfM)"), QVariant(2));
     MatrixSel->addItem(tr("Homography matrix filtering"), QVariant(3));
     MatrixSel->QWidget::hide();
     MatrixSelLabel->QWidget::hide();
@@ -618,7 +618,6 @@ PipelinePage::PipelinePage(QWidget *parent)
     advanced_options->addWidget(TerminalMode, 6, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
     advanced_options->addWidget(command, 7, 0, 1, 3);
-    // Global specific
     advanced_options->addWidget(MatrixSelLabel, 1, 0);
     advanced_options->addWidget(MatrixSel, 1, 1);
 
@@ -673,6 +672,7 @@ void PipelinePage::showEvent(QShowEvent*)
     str_commando = command->text();
     QString str(str_commando); 
     qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + json_dir + "\"");
+    qDebug() << str_commando.replace(QRegExp ("matchespath=\"([^\"]*)\""), "matchespath=\"" + json_dir + "\"");
     qDebug() << str_commando.replace(QRegExp ("imagespath=\"([^\"]*)\""), "imagespath=\"" + output_dir + "\"");
     command->setText(str_commando);
 
@@ -730,6 +730,7 @@ void PipelinePage::btnInputPathClicked()
     str_commando = command->text();
     QString str(str_commando); 
     qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + InputFolder + "\"");
+    qDebug() << str_commando.replace(QRegExp ("matchespath=\"([^\"]*)\""), "matchespath=\"" + InputFolder + "\"");
     command->setText(str_commando);
 
     enable_run_again();
@@ -851,7 +852,8 @@ void PipelinePage::wrongMessage()
 // Event: Advanced Options clicked
 void PipelinePage::btnAdvancedOptionsClicked()
 {
-    if (AdvancedOptions->checkState() == Qt::Checked) {
+    if (AdvancedOptions->checkState() == Qt::Checked) 
+    {
 	//Show all the Advanced Options
 	command->setEnabled(true);
 	TerminalMode->QWidget::show();
@@ -861,14 +863,11 @@ void PipelinePage::btnAdvancedOptionsClicked()
         sliderRatio->QWidget::show();
    	ratioValue->QWidget::show();
 	ratioLabel->QWidget::show();
-	// check if Pipeline = Global - show Matrix selector
-	if (PipelineSel->itemData(PipelineSel->currentIndex()).toString() == "2")
-	{
-	    MatrixSel->QWidget::show();
-	    MatrixSelLabel->QWidget::show();
-	}
+        MatrixSel->QWidget::show();
+	MatrixSelLabel->QWidget::show();
+
 	// If Pipeline = Incremental show image folder selection
-	else
+        if(PipelineSel->itemData(PipelineSel->currentIndex()).toString() == "1")
 	{
 	    ImagesFolderLabel->QWidget::show();
 	    ImagesFolderPath->QWidget::show();
@@ -990,7 +989,7 @@ void PipelinePage::on_PipelineSel_changed()
 
     qDebug() << str_commando.replace(QRegExp ("solver=\"([^\"]*)\""), "solver=\"" + get_SelItem + "\"");
     
-    // Dirty: hide non-affected options, show affected
+    // Dirty: hide non-affected options, show affected for Global SfM
     if(get_SelItem == "2")
     {
 	// Show Matrix selector, hide Imagesfolder
@@ -1004,23 +1003,26 @@ void PipelinePage::on_PipelineSel_changed()
 	    CameraSel->QWidget::hide();
    	    CameraSelLabel->QWidget::hide();
 	}
-	    solverImage1->QWidget::hide();
-	    solverImage1Button->QWidget::hide();
-	    solverImage1Label->QWidget::hide();
-	    solverImage2->QWidget::hide();
-	    solverImage2Button->QWidget::hide();
-	    solverImage2Label->QWidget::hide();
-            image_selector_grid_descr->QWidget::hide();
+	solverImage1->QWidget::hide();
+	solverImage1Button->QWidget::hide();
+	solverImage1Label->QWidget::hide();
+	solverImage2->QWidget::hide();
+	solverImage2Button->QWidget::hide();
+	solverImage2Label->QWidget::hide();
+        image_selector_grid_descr->QWidget::hide();
+	// Change matrix selector according to Pipeline (Incremental: g, Global: e)
+        MatrixSel->setCurrentIndex(2);
+	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"e\"");
     }
 
-    // Dirty: show non-affected options
-    if(get_SelItem == "1")
+    // Dirty: show non-affected options for Incremental SfM
+    else if(get_SelItem == "1")
     {
 	// Hide Matrix selector + show Images
 	if(AdvancedOptions->checkState() == Qt::Checked)
 	{
-	    MatrixSel->QWidget::hide();
-	    MatrixSelLabel->QWidget::hide();
+	    MatrixSel->QWidget::show();
+	    MatrixSelLabel->QWidget::show();
 	    ImagesFolderLabel->QWidget::show();
 	    ImagesFolderPath->QWidget::show();
 	    btnImagesFolderPath->QWidget::show();
@@ -1034,6 +1036,9 @@ void PipelinePage::on_PipelineSel_changed()
 	solverImage2Button->QWidget::show();
 	solverImage2Label->QWidget::show();
         image_selector_grid_descr->QWidget::show();
+	// Change matrix selector according to Pipeline (Incremental: g, Global: e)
+        MatrixSel->setCurrentIndex(1);
+	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"f\"");
     }
     command->setText(str_commando);
 
