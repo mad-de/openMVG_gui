@@ -82,12 +82,19 @@ if user_vars["step"] == "comp_features":
   if still_working:
    print "\n\n************************************************\nComputing features complete. Press Next to continue.\n************************************************"
 
+   # Save options to file
+   with open(os.path.join(matches_dir, "Features_options.txt"), "w") as text_file:
+    text_file.write("D. preset: " + user_vars["descr_pres"] + "; D. method: " + user_vars["descr_meth"])
+   text_file.close()
+
 elif user_vars["step"] == "sfm_solver":
  output_eval_dir = user_vars["inputpath"][:-8]
 
  if user_vars["solver"] == "1":
+  options_solver = "Incremental";
   reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
  elif user_vars["solver"] == "2":
+  options_solver = "Global";
   reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
 
  # SHARED: Compute matches
@@ -130,7 +137,19 @@ elif user_vars["step"] == "sfm_solver":
   still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir,"robust.ply")), curr_string, "ComputeStructureFromKnownPoses")
  
  if still_working:
+  # Get previous data
+  with open(os.path.join(user_vars["inputpath"], "Features_options.txt"), "r") as text_file_read:
+   features_output = text_file_read.readline();
+  text_file_read.close()
+  options_display = "Solver: " + options_solver + "; Filter: " + user_vars["matrix_filter"] + "; Camera model: " + user_vars["camera_model"] + "; Ratio: " + user_vars["ratio"] + "; " + features_output;
+   # Save options to file
+  with open(os.path.join(reconstruction_dir,"Pipeline_Options.txt"), "w") as text_file_write:
+   text_file_write.write(options_display)
+  text_file_write.close()
+
+  # Print output
   print "preview_path " + os.path.join(reconstruction_dir,"robust.ply end_path");
+  print "options_used " + options_display + " end_options_used";
   print "mvs_output_path " + os.path.join(reconstruction_dir," end_path");
   print "\n\n************************************************\nSfM Pipeline complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
 
@@ -142,7 +161,7 @@ elif user_vars["step"] == "pmvs":
 
  # Check if PMVS path exists - if not terminate
  if not os.path.exists(OPENMVG_PMVS_BIN):
-  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the" + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.\n");
+  sys.stderr.write("The PMVS binary files couldn't be found. Please check if PMVS is installed correctly in the " + OPENMVG_PMVS_BIN + "folder or specify another folder during building with the \"-DOPENMVG_PMVS_PATH=\" variable.\n");
   sys.stderr.write("PMVS output path: " + user_vars["output_dir"] + "PMVS/");
 
  else: 
@@ -153,7 +172,14 @@ elif user_vars["step"] == "pmvs":
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply")), curr_string, "pmvs2")
 
   if still_working:
+   # Get previous data
+   with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
+    pipeline_output = text_file.readline()
+   text_file.close()
+   options_display = "MVS: PMVS; Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; " + pipeline_output
+   # Data output
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply end_path");
+   print "options_used " + options_display + " end_options_used";
    print "\n\n************************************************\nRunning PMVS complete.\nOutput file: " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply") + "\nPress Finish to close the program or press Preview to check out the preview.\n************************************************"
 
 elif user_vars["step"] == "cmvs":
@@ -188,7 +214,14 @@ elif user_vars["step"] == "cmvs":
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply")), curr_string, "pmvs2")
 
   if still_working:
+   # Get previous data
+   with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
+    pipeline_output = text_file.readline()
+   text_file.close()
+   options_display = "MVS: CMVS; Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; " + pipeline_output
+   # Data output
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply end_path");
+   print "options_used " + options_display + " end_options_used";
    print "\n\n************************************************\nRunning CMVS complete.\nOutput file: " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply") + "\nPress Finish to close the program or press Preview check out the preview.\n************************************************"
 
 elif user_vars["step"] == "cmpmvs":
@@ -260,7 +293,14 @@ elif user_vars["step"] == "openMVS":
    pMVSTexture.wait()
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense_mesh_texture.mvs")), curr_string, "TextureMesh")
    if still_working:
+    # Get previous data
+    with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
+     pipeline_output = text_file.readline()
+    text_file.close()
+    options_display = "MVS: OpenMVS Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; " + pipeline_output
+    # Data output
     print "preview_path " + os.path.join(user_vars["output_dir"],"scene_dense_mesh_texture.ply end_path");
+    print "options_used " + options_display + " end_options_used";
     print "\n\n************************************************\nRunning openMVS complete.\nOutput folder: " + user_vars["output_dir"] + ".\nPress Finish to close the program or check out the Preview.\n************************************************"
     
 else:

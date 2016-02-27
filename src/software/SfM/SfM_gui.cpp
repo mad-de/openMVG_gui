@@ -30,10 +30,10 @@ int visited_comp_features = 0;
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
 
 // Global functions
-void launchPreview(QString preview_file)
+void launchPreview(QString preview_file, QString options)
 {
     QFile preview_path(preview_file);
-    QString preview_title = "Previewing file: " + QFileInfo(preview_path).fileName();
+    QString preview_title = "Previewing file: " + QFileInfo(preview_path).fileName() + " (" + options + ")";
 
     QProcess *procPreview = new QProcess();
     QStringList arguments;
@@ -94,19 +94,20 @@ void OMVGguiWizard::showHelp()
 void OMVGguiWizard::showPreview()
 {
     QString preview_file;
+    QString options;
 
     switch (currentId()) {
         break;
     case Page_Pipeline:
         preview_file = field("Preview_Pipeline").toString();
+	options = field("Pipeline_Options").toString();
         break;
     case Page_MVSSelector:
         preview_file = field("Preview_MVS").toString();
+	options = field("MVS_Options").toString();
         break;
-    default:
-        preview_file = field("Preview_Pipeline").toString();
     }
-    launchPreview(preview_file);
+    launchPreview(preview_file, options);
 }
 
 // PAGE
@@ -497,6 +498,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     InputPath->QWidget::hide();
     OutputPath = new QLineEdit("");
     OutputPath->QWidget::hide();
+    OptionsPipeline = new QLineEdit("");
+    OptionsPipeline->QWidget::hide();
     btnInputPath = new QPushButton(tr("Select"));
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("Matches Path:"));
@@ -799,6 +802,7 @@ void PipelinePage::rightMessage()
     QByteArray strdata = process_command->readAllStandardOutput();
     QString strdata_qstr = strdata;
     QString strdata_qstr_copy = strdata;
+    QString strdata_qstr_options = strdata;
     QString strdata_qstr_output = strdata;
     // When triggered, get the preview_path output, enable Preview button, don't show
     if (strdata.contains("preview_path")) {
@@ -812,12 +816,18 @@ void PipelinePage::rightMessage()
 	qDebug() << strdata_qstr_copy.replace(QRegExp (".*mvs_output_path "), "" );
 	qDebug() << strdata_qstr_copy.replace(QRegExp (" end_path.*"), "" );
 	OutputPath->setText(strdata_qstr_copy);
-    	registerField("Pipeline_OutputPath", OutputPath);
+    	registerField("Pipeline_Output", OutputPath);
+	// Also get options
+	qDebug() << strdata_qstr_options.replace(QRegExp (".*options_used "), "" );
+	qDebug() << strdata_qstr_options.replace(QRegExp (" end_options_used.*"), "" );
+	OptionsPipeline->setText(strdata_qstr_options);
+    	registerField("Pipeline_Options", OptionsPipeline);
+	// Insert
 	txtReport->moveCursor (QTextCursor::End);
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
      	// Run Preview 
-	launchPreview(strdata_qstr);
+	launchPreview(strdata_qstr, strdata_qstr_options);
     }
     else
     {
@@ -1157,6 +1167,8 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("sfm_data.json Folder:"));
     InputLabel->QWidget::hide();
+    OptionsMVS = new QLineEdit("");
+    OptionsMVS->QWidget::hide();
     OutputPath = new QLineEdit(work_dir);
     OutputPath->QWidget::hide();
     btnOutputPath = new QPushButton(tr("Select"));
@@ -1370,18 +1382,26 @@ void MVSSelectorPage::rightMessage()
     QByteArray strdata = process_command->readAllStandardOutput();
     QString strdata_qstr = strdata;
     QString strdata_qstr_output = strdata;
-    if (strdata.contains("preview_path")) {
+    QString strdata_qstr_options = strdata;
+    if (strdata.contains("preview_path")) 
+    {
 	qDebug() << strdata_qstr.replace(QRegExp (".*preview_path "), "" );
 	qDebug() << strdata_qstr.replace(QRegExp (" end_path.*"), "" );
 	preview_mvs->setText(strdata_qstr);
 	registerField("Preview_MVS", preview_mvs);
 	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
-	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_path"), "" );
+	qDebug() << strdata_qstr_output.replace(QRegExp ("preview_path.*end_options_used"), "" );
+	// Also get options
+	qDebug() << strdata_qstr_options.replace(QRegExp (".*options_used "), "" );
+	qDebug() << strdata_qstr_options.replace(QRegExp (" end_options_used.*"), "" );
+	OptionsMVS->setText(strdata_qstr_options);
+    	registerField("MVS_Options", OptionsMVS);
+	// Print output
 	txtReport->moveCursor (QTextCursor::End);
 	txtReport->insertPlainText (strdata_qstr_output);
 	txtReport->moveCursor (QTextCursor::End);
      	// Run Preview 
-    	launchPreview(strdata_qstr);
+    	launchPreview(strdata_qstr, strdata_qstr_options);
     }
     else
     {

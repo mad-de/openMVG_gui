@@ -113,6 +113,7 @@ private:
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
     QLineEdit *OutputPath;
+    QLineEdit *OptionsPipeline;
     QLineEdit *ImagesFolderPath;
     QPushButton *btnImagesFolderPath;
     QLabel *ImagesFolderLabel;
@@ -202,6 +203,7 @@ private:
     QCheckBox *UseRefine;
     QCheckBox *UseDensify;
     QLineEdit *preview_mvs;
+    QLineEdit *OptionsMVS;
 };
 
 #endif
