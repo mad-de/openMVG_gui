@@ -44,6 +44,7 @@ private slots:
     void rightMessage();
     void wrongMessage();
     void btnInputPathClicked();
+    void btnOutputPathClicked();
     void btnAdvancedOptionsClicked();
     void btnProcessClicked();
     void btnTerminalModeClicked();
@@ -54,14 +55,18 @@ private slots:
 
 private:
     QTimer* demo_download_timer;
+    QLabel *InputLabel;
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
     QCheckBox *AdvancedOptions;
     QCheckBox *TerminalMode;
+    QLabel *OutputLabel;
+    QLineEdit *OutputPath_finished;
+    QLineEdit *OutputPath;
+    QPushButton *btnOutputPath;
     QTextEdit *txtReport;
     QLineEdit *command;
     QPushButton *btnProcess;
-    QLabel *InputLabel;
     QLabel *CommandLabel;
     QProcess *process_command;
     QGridLayout *main_grid;
@@ -94,6 +99,7 @@ private slots:
     void rightMessage();
     void wrongMessage();
     void btnInputPathClicked();
+    void btnOutputPathClicked();
     void btnImagesFolderPathClicked();
     void btnProcessClicked();
     void btnAdvancedOptionsClicked();
@@ -112,7 +118,10 @@ private:
     QLineEdit *StatusPipelinePage;
     QLineEdit *InputPath;
     QPushButton *btnInputPath;
+    QLineEdit *OutputPath_Pipeline;
+    QLabel *OutputLabel;
     QLineEdit *OutputPath;
+    QPushButton *btnOutputPath;
     QLineEdit *OptionsPipeline;
     QLineEdit *ImagesFolderPath;
     QPushButton *btnImagesFolderPath;

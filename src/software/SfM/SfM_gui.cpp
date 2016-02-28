@@ -9,10 +9,11 @@ QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 
 QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length()-1);
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
+QString outputpath = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images_out/matches/";
 
-QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
+QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
 
-QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\" outputpath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
 
 QString initialcommandline_mvs_selector = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
@@ -123,11 +124,16 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
    
     // Initialize Widgets
 
-    // Set specific widgets
     InputPath = new QLineEdit(work_dir);
     btnInputPath = new QPushButton(tr("Select"));
     InputLabel = new QLabel(tr("Image folder:"));
     // Set general widgets
+    OutputPath = new QLineEdit(outputpath);
+    btnOutputPath = new QPushButton(tr("Select"));
+    OutputLabel = new QLabel(tr("Output folder:"));
+    OutputPath->QWidget::hide();
+    btnOutputPath->QWidget::hide();
+    OutputLabel->QWidget::hide();
     txtReport = new QTextEdit("");
     txtReport->verticalScrollBar()->setStyleSheet(TerminalLikeScrollbar);     // when setting background-color, qt somehow looses all stylesheet info about vertical scrollbar. set it new.
     txtReport->setStyleSheet("background-color: #300a24; border: 0px solid black; color: #ffffff; font: 10pt Monospace;");
@@ -172,6 +178,8 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     terminal_fields = new QGridLayout;    
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
+    OutputPath_finished = new QLineEdit(outputpath);
+    registerField("Comp_features_OutputPath", OutputPath_finished);
     registerField("Comp_Features_InputPath", InputPath);
 
     // Step specific layout
@@ -191,10 +199,13 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     advanced_options->addWidget(DescrMethLabel, 3, 0);
     advanced_options->addWidget(DescrMeth, 3, 1);
     DescrPres->setCurrentIndex(0);
+    advanced_options->addWidget(OutputLabel, 4, 0);
+    advanced_options->addWidget(OutputPath, 4, 1);
+    advanced_options->addWidget(btnOutputPath, 4, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 4, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 5, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 5, 0, 1, 3);
+    advanced_options->addWidget(command, 6, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
     terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
@@ -212,6 +223,7 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
     connect(btnInputPath,SIGNAL(clicked()),this,SLOT(btnInputPathClicked()));
     connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
+    connect(btnOutputPath,SIGNAL(clicked()),this,SLOT(btnOutputPathClicked()));
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
     connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_CameraSel_changed);
@@ -227,6 +239,7 @@ int Comp_FeaturesPage::nextId() const
 // When Initializing page (use Show event instead of initialize page) set Text to "Skip" or "Next"
 void Comp_FeaturesPage::showEvent(QShowEvent*)
 {
+    // If Demo dir doesn't exist, download it via git
     if ((QDir(demo_dir).exists() == false) and visited_comp_features == 0)
      {
 	wizard()->button(QWizard::NextButton)->setEnabled(false);
@@ -349,6 +362,37 @@ void Comp_FeaturesPage::btnInputPathClicked()
     }
 }
 
+// Event: Select Output path
+void Comp_FeaturesPage::btnOutputPathClicked()
+{
+    QString str_get_commando;
+
+    str_get_commando = OutputPath->text();
+
+	QString OutputFolder;
+	
+	OutputFolder = QFileDialog::getExistingDirectory(
+    this, 
+    tr("Choose folder to export the matches files to"),
+    str_get_commando,
+    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
+    // change Folder according to selection in input field
+    OutputPath->setText(OutputFolder);
+    // changes outputpath="..." to new outputpath in exec field
+    QString str_commando;
+    str_commando = command->text();
+    QString str(str_commando); 
+    qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + OutputFolder + "\"");
+    command->setText(str_commando);
+
+    // Have we been here before? Enable re-running
+    if(field("Comp_Features_finished").toString() == "false") {
+	btnProcess->setText(tr("Run"));
+	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+	btnProcess->setEnabled(true);
+    }
+}
+
 // Event: Click Run
 void Comp_FeaturesPage::btnProcessClicked()
 {
@@ -372,9 +416,28 @@ void Comp_FeaturesPage::btnProcessClicked()
 void Comp_FeaturesPage::rightMessage()
 {
     QByteArray strdata = process_command->readAllStandardOutput();
-    txtReport->moveCursor (QTextCursor::End);
-    txtReport->insertPlainText (strdata);
-    txtReport->moveCursor (QTextCursor::End);
+    QString strdata_qstr = strdata;
+    QString strdata_qstr_output = strdata;
+    // When triggered, get the preview_path output, enable Preview button, don't show
+    if (strdata.contains("output_path")) {
+	qDebug() << strdata_qstr.replace(QRegExp (".*output_path "), "" );
+	qDebug() << strdata_qstr.replace(QRegExp (" end_path.*"), "" );
+	OutputPath_finished->setText(strdata_qstr);
+	registerField("Comp_features_OutputPath", OutputPath_finished);
+	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
+	qDebug() << strdata_qstr_output.replace(QRegExp ("output_path.*end_path"), "" );
+	// Insert
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (strdata_qstr_output);
+	txtReport->moveCursor (QTextCursor::End);
+    }
+    else
+    {
+	txtReport->moveCursor (QTextCursor::End);
+	txtReport->insertPlainText (strdata);
+	txtReport->moveCursor (QTextCursor::End);
+    }
+    // Finished? Hooray! Get this party started:
     if (strdata.contains("Press Next to continue")) {
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Next >");
@@ -410,6 +473,9 @@ void Comp_FeaturesPage::btnAdvancedOptionsClicked()
 	DescrPresLabel->QWidget::show();
 	DescrMeth->QWidget::show();
 	DescrMethLabel->QWidget::show();
+	OutputPath->QWidget::show();
+	btnOutputPath->QWidget::show();
+	OutputLabel->QWidget::show();
     }
     else {
 	// Hide all the Advanced options + command
@@ -423,6 +489,9 @@ void Comp_FeaturesPage::btnAdvancedOptionsClicked()
 	DescrPresLabel->QWidget::hide();
 	DescrMeth->QWidget::hide();
 	DescrMethLabel->QWidget::hide();
+	OutputPath->QWidget::hide();
+	btnOutputPath->QWidget::hide();
+	OutputLabel->QWidget::hide();
     }
 }
 
@@ -496,14 +565,18 @@ PipelinePage::PipelinePage(QWidget *parent)
     PipelineSel->addItem(tr("Global (Standard)"), QVariant(2));
     InputPath = new QLineEdit("");
     InputPath->QWidget::hide();
-    OutputPath = new QLineEdit("");
-    OutputPath->QWidget::hide();
     OptionsPipeline = new QLineEdit("");
     OptionsPipeline->QWidget::hide();
     btnInputPath = new QPushButton(tr("Select"));
     btnInputPath->QWidget::hide();
     InputLabel = new QLabel(tr("Matches Path:"));
     InputLabel->QWidget::hide();
+    OutputPath = new QLineEdit(outputpath);
+    btnOutputPath = new QPushButton(tr("Select"));
+    OutputLabel = new QLabel(tr("Output folder:"));
+    OutputPath->QWidget::hide();
+    btnOutputPath->QWidget::hide();
+    OutputLabel->QWidget::hide();
     ImagesFolderPath = new QLineEdit("");
     ImagesFolderPath->QWidget::hide();
     btnImagesFolderPath = new QPushButton(tr("Select"));
@@ -581,7 +654,9 @@ PipelinePage::PipelinePage(QWidget *parent)
     advanced_options = new QGridLayout;   
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
-    registerField(tr("Pipeline_OutputPath"), OutputPath);
+    OutputPath_Pipeline = new QLineEdit("");
+    OutputPath_Pipeline->QWidget::hide();
+    registerField(tr("Pipeline_OutputPath"), OutputPath_Pipeline);
     StatusPipelinePage = new QLineEdit("init");
     registerField("PipelinePage_status", StatusPipelinePage);
     preview_pipeline = new QLineEdit;
@@ -605,6 +680,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Advanced layout
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     advanced_options->addWidget(AdvancedOptions, 0, 0, 1, 2);
+    advanced_options->addWidget(MatrixSelLabel, 1, 0);
+    advanced_options->addWidget(MatrixSel, 1, 1);
     advanced_options->addWidget(CameraSelLabel, 2, 0);
     advanced_options->addWidget(CameraSel, 2, 1);
     CameraSel->setCurrentIndex(2);
@@ -617,12 +694,13 @@ PipelinePage::PipelinePage(QWidget *parent)
     advanced_options->addWidget(ImagesFolderLabel, 5, 0);
     advanced_options->addWidget(ImagesFolderPath, 5, 1);
     advanced_options->addWidget(btnImagesFolderPath, 5, 2);
+    advanced_options->addWidget(OutputLabel, 6, 0);
+    advanced_options->addWidget(OutputPath, 6, 1);
+    advanced_options->addWidget(btnOutputPath, 6, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 6, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 7, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 7, 0, 1, 3);
-    advanced_options->addWidget(MatrixSelLabel, 1, 0);
-    advanced_options->addWidget(MatrixSel, 1, 1);
+    advanced_options->addWidget(command, 8, 0, 1, 3);
 
     terminal_fields->addWidget(CommandLabel, 0, 0);  
     terminal_fields->addWidget(btnProcess, 0, 8);
@@ -641,6 +719,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
     connect(btnInputPath,SIGNAL(clicked()),this,SLOT(btnInputPathClicked()));
+    connect(btnOutputPath,SIGNAL(clicked()),this,SLOT(btnOutputPathClicked()));
     connect(btnImagesFolderPath,SIGNAL(clicked()),this,SLOT(btnImagesFolderPathClicked()));
     connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
     connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
@@ -665,18 +744,19 @@ void PipelinePage::cleanupPage()
 // When Initializing page II
 void PipelinePage::showEvent(QShowEvent*)
 {
-    // Insert field values
+    // Set paths according to the path status from the previous page
     QString input_dir_path = field("Comp_Features_InputPath").toString();
-    QString output_dir = input_dir_path.mid(0, input_dir_path.length()-1) + "_out/";
-    QString json_dir = output_dir + "matches/";
-    QString mvs_dir = output_dir + "reconstruction_global/";
+    QString output_dir = field("Comp_features_OutputPath").toString();
+    QString output_dir_cut = field("Comp_features_OutputPath").toString().mid(0, field("Comp_features_OutputPath").toString().length()-1);
+    QString mvs_dir = output_dir_cut.mid(0, output_dir_cut.lastIndexOf("/")) + "/reconstruction_global/";
 
     QString str_commando;
     str_commando = command->text();
     QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + json_dir + "\"");
-    qDebug() << str_commando.replace(QRegExp ("matchespath=\"([^\"]*)\""), "matchespath=\"" + json_dir + "\"");
-    qDebug() << str_commando.replace(QRegExp ("imagespath=\"([^\"]*)\""), "imagespath=\"" + output_dir + "\"");
+    qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + output_dir + "\"");
+    qDebug() << str_commando.replace(QRegExp ("matchespath=\"([^\"]*)\""), "matchespath=\"" + output_dir + "\"");
+    qDebug() << str_commando.replace(QRegExp ("imagespath=\"([^\"]*)\""), "imagespath=\"" + input_dir_path + "\"");
+    qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + mvs_dir + "\"");
     command->setText(str_commando);
 
     // Do we need the cancel button here? I don't think so...
@@ -685,8 +765,9 @@ void PipelinePage::showEvent(QShowEvent*)
     // Have we been here before? Set the paths accordingly
     if (field("PipelinePage_status").toString() == "init") 
     {
-	InputPath->setText(json_dir);
+	InputPath->setText(output_dir);
 	OutputPath->setText(mvs_dir);
+	OutputPath_Pipeline->setText(mvs_dir);
 	ImagesFolderPath->setText(input_dir_path);
 	StatusPipelinePage->setText("visited");
 	registerField("PipelinePage_status", StatusPipelinePage);
@@ -737,6 +818,37 @@ void PipelinePage::btnInputPathClicked()
     command->setText(str_commando);
 
     enable_run_again();
+}
+
+// Event: Select Output path
+void PipelinePage::btnOutputPathClicked()
+{
+    QString str_get_commando;
+
+    str_get_commando = OutputPath->text();
+
+	QString OutputFolder;
+	
+	OutputFolder = QFileDialog::getExistingDirectory(
+    this, 
+    tr("Choose folder to export the matches files to"),
+    str_get_commando,
+    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
+    // change Folder according to selection in input field
+    OutputPath->setText(OutputFolder);
+    // changes outputpath="..." to new outputpath in exec field
+    QString str_commando;
+    str_commando = command->text();
+    QString str(str_commando); 
+    qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + OutputFolder + "\"");
+    command->setText(str_commando);
+
+    // Have we been here before? Enable re-running
+    if(field("Comp_Features_finished").toString() == "false") {
+	btnProcess->setText(tr("Run"));
+	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+	btnProcess->setEnabled(true);
+    }
 }
 
 // Event: Select Images Folder path
@@ -815,8 +927,8 @@ void PipelinePage::rightMessage()
 	// Also get paths for export options
 	qDebug() << strdata_qstr_copy.replace(QRegExp (".*mvs_output_path "), "" );
 	qDebug() << strdata_qstr_copy.replace(QRegExp (" end_path.*"), "" );
-	OutputPath->setText(strdata_qstr_copy);
-    	registerField("Pipeline_Output", OutputPath);
+	OutputPath_Pipeline->setText(strdata_qstr_copy);
+    	registerField("Pipeline_Output", OutputPath_Pipeline);
 	// Also get options
 	qDebug() << strdata_qstr_options.replace(QRegExp (".*options_used "), "" );
 	qDebug() << strdata_qstr_options.replace(QRegExp (" end_options_used.*"), "" );
@@ -875,6 +987,9 @@ void PipelinePage::btnAdvancedOptionsClicked()
 	ratioLabel->QWidget::show();
         MatrixSel->QWidget::show();
 	MatrixSelLabel->QWidget::show();
+	OutputPath->QWidget::show();
+	btnOutputPath->QWidget::show();
+	OutputLabel->QWidget::show();
 
 	// If Pipeline = Incremental show image folder selection
         if(PipelineSel->itemData(PipelineSel->currentIndex()).toString() == "1")
@@ -901,7 +1016,9 @@ void PipelinePage::btnAdvancedOptionsClicked()
 	MatrixSelLabel->QWidget::hide();
 	CameraSel->QWidget::hide();
 	CameraSelLabel->QWidget::hide();
-
+	OutputPath->QWidget::hide();
+	btnOutputPath->QWidget::hide();
+	OutputLabel->QWidget::hide();
 	TerminalMode->QWidget::hide();
 	TerminalMode->QCheckBox::setChecked(false);
 	command->setEnabled(false);

@@ -51,57 +51,55 @@ def rename_matches(char_in, solver, folder):
   filename_out = os.path.join(folder, "matches." + char_out + ".txt")
   os.rename(filename_in, filename_out)
 
-if user_vars["step"] == "comp_features":
- # Indicate Input dir
- input_eval_dir = user_vars["inputpath"]
- # Check if last character is a / and if so cut output dir by 1 and append _out
- if user_vars["inputpath"].endswith('/'): 
-  output_eval_dir = os.path.join(user_vars["inputpath"][:-1] + "_out")
- else: 
-  output_eval_dir = os.path.join(user_vars["inputpath"] + "_out")
- if not os.path.exists(output_eval_dir):
-  os.mkdir(output_eval_dir)
+# Check if input folder is not empty
+def check_for_empty_input_folder(folder):
+ if not os.listdir(folder):
+  sys.stderr.write("Your input folder is empty.");
+  return False;
+ else:
+  return True;
 
- # Create the ouput/matches folder if not present
- matches_dir = os.path.join(output_eval_dir, "matches")
- if not os.path.exists(matches_dir):
-  os.mkdir(matches_dir)
+if user_vars["step"] == "comp_features":
+ # Create paths if not existent
+ if not os.path.exists(os.path.abspath(os.path.join(user_vars["outputpath"], os.pardir))):
+  os.mkdir(os.path.abspath(os.path.join(user_vars["outputpath"], os.pardir)))
+ if not os.path.exists(user_vars["outputpath"]):
+  os.mkdir(user_vars["outputpath"])
+
+ still_working = check_for_empty_input_folder(user_vars["inputpath"]);
 
  # 1. Image listing - generate sfm_data.json
- curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", input_eval_dir, "-o", matches_dir, "-d", camera_file_params, "-c", user_vars["camera_model"] ]
- pIntrisics = subprocess.Popen(curr_string)
- pIntrisics.wait()
- still_working = erroroutput(os.path.exists(os.path.join(matches_dir, "sfm_data.json")), curr_string, "SfMInit_ImageListing")
+ if still_working:
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", user_vars["inputpath"], "-o", user_vars["outputpath"], "-d", camera_file_params, "-c", user_vars["camera_model"] ]
+  pIntrisics = subprocess.Popen(curr_string)
+  pIntrisics.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"], "sfm_data.json")), curr_string, "SfMInit_ImageListing")
  
  # 2. Compute features
  if still_working:
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", user_vars["descr_meth"], "-f" , user_vars["force"], "-p", user_vars["descr_pres"] ]
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", os.path.join(user_vars["outputpath"], "sfm_data.json"), "-o", user_vars["outputpath"], "-m", user_vars["descr_meth"], "-f" , user_vars["force"], "-p", user_vars["descr_pres"] ]
   pFeatures = subprocess.Popen(curr_string)
   pFeatures.wait()
-  still_working = erroroutput(os.path.exists(os.path.join(matches_dir, "image_describer.json")), curr_string, "ComputeFeratures")
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"], "image_describer.json")), curr_string, "ComputeFeratures")
   if still_working:
+   print "output_path " + user_vars["outputpath"] + " end_path";
    print "\n\n************************************************\nComputing features complete. Press Next to continue.\n************************************************"
 
    # Save options to file
-   with open(os.path.join(matches_dir, "Features_options.txt"), "w") as text_file:
+   with open(os.path.join(user_vars["outputpath"], "Features_options.txt"), "w") as text_file:
     text_file.write("D. preset: " + user_vars["descr_pres"] + "; D. method: " + user_vars["descr_meth"])
    text_file.close()
 
 elif user_vars["step"] == "sfm_solver":
- output_eval_dir = user_vars["inputpath"][:-8]
 
- if user_vars["solver"] == "1":
-  options_solver = "Incremental";
-  reconstruction_dir = os.path.join(output_eval_dir+"reconstruction_sequential/")
- elif user_vars["solver"] == "2":
-  options_solver = "Global";
-  reconstruction_dir = os.path.join(output_eval_dir,"reconstruction_global/")
+ still_working = check_for_empty_input_folder(user_vars["inputpath"]);
 
  # SHARED: Compute matches
- curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"] ]
- pMatches = subprocess.Popen(curr_string)
- pMatches.wait()
- still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
+ if still_working:
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeMatches"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-o", user_vars["inputpath"], "-r", user_vars["ratio"], "-g", user_vars["matrix_filter"], "-f", user_vars["force"] ]
+  pMatches = subprocess.Popen(curr_string)
+  pMatches.wait()
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["inputpath"], "geometric_matches")), curr_string, "ComputeMatches")
 
  # Rename output file to work with SfM pipeline
  rename_matches(user_vars["matrix_filter"], user_vars["solver"], user_vars["inputpath"])
@@ -109,49 +107,54 @@ elif user_vars["step"] == "sfm_solver":
  # SEQUENTIAL: Reconstruction 
  if still_working:
   if user_vars["solver"] == "1":
-   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", reconstruction_dir, "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ]
+   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", user_vars["outputpath"], "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ]
    pRecons = subprocess.Popen(curr_string)
    pRecons.wait()
-   still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir, "sfm_data.json")), curr_string, "IncrementalSfM")
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"], "sfm_data.json")), curr_string, "IncrementalSfM")
 
  # GLOBAL: Reconstruction
  if still_working:
   if user_vars["solver"] == "2":
-   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", reconstruction_dir ]
+   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", user_vars["outputpath"] ]
    pRecons = subprocess.Popen(curr_string)
    pRecons.wait()
-   still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir, "sfm_data.json")), curr_string, "GlobalSfM")
+   still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"], "sfm_data.json")), curr_string, "GlobalSfM")
 
  # SHARED: Colorize Structure
  if still_working:
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"sfm_data.json", "-o", os.path.join(reconstruction_dir,"colorized.ply")]
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", os.path.join(user_vars["outputpath"],"sfm_data.json"), "-o", os.path.join(user_vars["outputpath"],"colorized.ply")]
   pColorize = subprocess.Popen(curr_string)
   pColorize.wait()
-  still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir,"colorized.ply")), curr_string, "ComputeSfM_DataColor")
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"],"colorized.ply")), curr_string, "ComputeSfM_DataColor")
 
  if still_working:
   # SHARED: Structure from Known Poses (robust triangulation)
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", reconstruction_dir+"sfm_data.json", "-m", user_vars["inputpath"], "-o", os.path.join(reconstruction_dir,"robust.ply")]
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeStructureFromKnownPoses"),  "-i", os.path.join(user_vars["outputpath"],"sfm_data.json"), "-m", user_vars["inputpath"], "-o", os.path.join(user_vars["outputpath"],"robust.ply")]
   pRobust = subprocess.Popen(curr_string)
   pRobust.wait()
-  still_working = erroroutput(os.path.exists(os.path.join(reconstruction_dir,"robust.ply")), curr_string, "ComputeStructureFromKnownPoses")
+  still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"],"robust.ply")), curr_string, "ComputeStructureFromKnownPoses")
  
  if still_working:
   # Get previous data
+  if user_vars["solver"] == "1":
+   options_solver = "Incremental";
+  elif user_vars["solver"] == "2":
+   options_solver = "Global";
+
   with open(os.path.join(user_vars["inputpath"], "Features_options.txt"), "r") as text_file_read:
    features_output = text_file_read.readline();
   text_file_read.close()
   options_display = "Solver: " + options_solver + "; Filter: " + user_vars["matrix_filter"] + "; Camera model: " + user_vars["camera_model"] + "; Ratio: " + user_vars["ratio"] + "; " + features_output;
    # Save options to file
-  with open(os.path.join(reconstruction_dir,"Pipeline_Options.txt"), "w") as text_file_write:
+  with open(os.path.join(user_vars["outputpath"],"Pipeline_Options.txt"), "w") as text_file_write:
    text_file_write.write(options_display)
   text_file_write.close()
 
   # Print output
-  print "preview_path " + os.path.join(reconstruction_dir,"robust.ply end_path");
+  print "preview_path " + os.path.join(user_vars["outputpath"],"robust.ply end_path");
   print "options_used " + options_display + " end_options_used";
-  print "mvs_output_path " + os.path.join(reconstruction_dir," end_path");
-  print "\n\n************************************************\nSfM Pipeline complete.\nOutput folder: " + reconstruction_dir + ".\nPress Next to continue.\n************************************************"
+  print "mvs_output_path " + os.path.join(user_vars["outputpath"]," end_path");
+  print "\n\n************************************************\nSfM Pipeline complete.\nOutput folder: " + user_vars["outputpath"] + ".\nPress Next to continue.\n************************************************"
 
 elif user_vars["step"] == "pmvs":
  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2PMVS"),  "-i", os.path.join(user_vars["inputpath"]+"sfm_data.json"), "-o", user_vars["output_dir"] ]
