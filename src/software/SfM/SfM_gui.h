@@ -175,6 +175,7 @@ public:
     int nextId() const Q_DECL_OVERRIDE;
 
 private slots:
+    void get_standard_paths(QString str_commando);
     void rightMessage();
     void wrongMessage();
     void btnInputPathClicked();
@@ -187,6 +188,9 @@ private slots:
     void btnUseDensifyClicked();
     void btnUseRefineClicked();
     void enable_rerunning();
+    void PMVSoptionsdisplay();
+    void PMVSoptionshide();
+    void pmvsOptionsclicked(QString option_decl);
 
 private:
     QLineEdit *StatusMVSSelectorPage;
@@ -213,6 +217,21 @@ private:
     QCheckBox *UseDensify;
     QLineEdit *preview_mvs;
     QLineEdit *OptionsMVS;
+    QLabel *ImageCountLabel;
+    QLineEdit *ImageCount;
+    QLabel *numCPULabel;
+    QLineEdit *numCPU;
+    QLabel *LevelLabel;
+    QLineEdit *level;
+    QLabel *csizeLabel;
+    QLineEdit *csize;
+    QLabel *thresholdLabel;
+    QLineEdit *threshold;
+    QLabel *wsizeLabel;
+    QLineEdit *wsize;
+    QLabel *minImageLabel;
+    QLineEdit *minImage;
+    QSignalMapper *pmvsOptionsmapper;
 };
 
 #endif

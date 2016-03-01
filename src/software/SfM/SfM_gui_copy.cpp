@@ -1432,23 +1432,13 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     connect(MVSSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MVSSelectorPage::on_MVSSel_changed);
     connect(UseDensify,SIGNAL(clicked()),this,SLOT(btnUseDensifyClicked()));
     connect(UseRefine,SIGNAL(clicked()),this,SLOT(btnUseRefineClicked()));
-    // mapper for CMVS options
-    pmvsOptionsmapper = new QSignalMapper( this );
-    connect(pmvsOptionsmapper, SIGNAL(mapped(QString)), this, SLOT(pmvsOptionsclicked(QString)));
-    pmvsOptionsmapper->setMapping(ImageCount, "max_imagecount");
-    pmvsOptionsmapper->setMapping(numCPU, "cpu");
-    pmvsOptionsmapper->setMapping(level, "level");
-    pmvsOptionsmapper->setMapping(csize, "csize");
-    pmvsOptionsmapper->setMapping(threshold, "threshold");
-    pmvsOptionsmapper->setMapping(wsize, "wsize");
-    pmvsOptionsmapper->setMapping(minImage, "minImageNum");
-    connect(ImageCount, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(numCPU, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(level, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(csize, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(threshold, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(wsize, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(minImage, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
+    connect(ImageCount,SIGNAL(textEdited(QString)),this,SLOT(ImageCountClicked()));
+    connect(numCPU,SIGNAL(textEdited(QString)),this,SLOT(numCPUClicked()));
+    connect(level,SIGNAL(textEdited(QString)),this,SLOT(levelClicked()));
+    connect(csize,SIGNAL(textEdited(QString)),this,SLOT(csizeClicked()));
+    connect(threshold,SIGNAL(textEdited(QString)),this,SLOT(thresholdClicked()));
+    connect(wsize,SIGNAL(textEdited(QString)),this,SLOT(wsizeClicked()));
+    connect(minImage,SIGNAL(textEdited(QString)),this,SLOT(minImageClicked()));
 }
 
 int MVSSelectorPage::nextId() const
@@ -1741,17 +1731,6 @@ void MVSSelectorPage::PMVSoptionshide()
     wsize->QWidget::hide();
     minImageLabel->QWidget::hide();
     minImage->QWidget::hide();
-    // if we are not in CMVS meun, reset values to standard
-    if (MVSSel->itemData(MVSSel->currentIndex()).toString() != "3")
-    {
-	ImageCount->setText("100");
-	numCPU->setText("8");
-	level->setText("1");
-	csize->setText("2");
-	threshold->setText("0.7");
-	wsize->setText("7");
-	minImage->setText("3");
-    }
 }
 
 // Event: Field command changed --> Enable run (Assume, whoever clicks that knows what he's doing)
@@ -1799,7 +1778,6 @@ void MVSSelectorPage::on_MVSSel_changed()
 	if(AdvancedOptions->checkState() == Qt::Checked)
 	{
 	PMVSoptionsdisplay();
-	}
     }
     else if(get_SelItem == "4")
     {
@@ -1857,20 +1835,66 @@ void MVSSelectorPage::btnUseRefineClicked()
     command->setText(str_commando);
 }
 
-// Event pmvsOptions clicked
-void MVSSelectorPage::pmvsOptionsclicked(QString option_decl)
+// Event: ImageCount changed
+void MVSSelectorPage::ImageCountClicked()
 {
+    QString get_SelItem = ImageCount->text();
     QString str_commando;
     str_commando = command->text();
-    QString replace_string;
-    if (option_decl == "max_imagecount") { replace_string = ImageCount->text(); }
-    else if (option_decl == "cpu") { replace_string = numCPU->text(); }
-    else if (option_decl == "level") { replace_string = level->text(); }
-    else if (option_decl == "csize") { replace_string = csize->text(); }
-    else if (option_decl == "threshold") { replace_string = threshold->text(); }
-    else if (option_decl == "wsize") { replace_string = wsize->text(); }
-    else if (option_decl == "minImageNum") { replace_string = minImage->text(); }
-    
-    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + replace_string + "\"");
+    qDebug() << str_commando.replace(QRegExp ("max_imagecount=\"([^\"]*)\""), "max_imagecount=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+// Event: numCPU changed
+void MVSSelectorPage::numCPUClicked()
+{
+    QString get_SelItem = numCPU->text();
+    QString str_commando;
+    str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("cpu=\"([^\"]*)\""), "cpu=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+// Event: level changed
+void MVSSelectorPage::levelClicked()
+{
+    QString get_SelItem = level->text();
+    QString str_commando;
+    str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("level=\"([^\"]*)\""), "level=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+// Event: csize changed
+void MVSSelectorPage::csizeClicked()
+{
+    QString get_SelItem = csize->text();
+    QString str_commando;
+    str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("csize=\"([^\"]*)\""), "csize=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+// Event: threshold changed
+void MVSSelectorPage::thresholdClicked()
+{
+    QString get_SelItem = threshold->text();
+    QString str_commando;
+    str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("threshold=\"([^\"]*)\""), "threshold=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+// Event: wsize changed
+void MVSSelectorPage::wsizeClicked()
+{
+    QString get_SelItem = wsize->text();
+    QString str_commando;
+    str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("wsize=\"([^\"]*)\""), "wsize=\"" + get_SelItem + "\"");
+    command->setText(str_commando);
+}
+// Event: minImage changed
+void MVSSelectorPage::minImageClicked()
+{
+    QString get_SelItem = minImage->text();
+    QString str_commando;
+    str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp ("minImageNum=\"([^\"]*)\""), "minImageNum=\"" + get_SelItem + "\"");
     command->setText(str_commando);
 }

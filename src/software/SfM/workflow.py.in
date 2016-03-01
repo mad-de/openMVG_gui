@@ -87,7 +87,7 @@ if user_vars["step"] == "comp_features":
 
    # Save options to file
    with open(os.path.join(user_vars["outputpath"], "Features_options.txt"), "w") as text_file:
-    text_file.write("D. preset: " + user_vars["descr_pres"] + "; D. method: " + user_vars["descr_meth"])
+    text_file.write("Feature computing: Describer preset: " + user_vars["descr_pres"] + "; Describer method: " + user_vars["descr_meth"] + "; Camera model: " + user_vars["camera_model"] + "; [EOL]" )
    text_file.close()
 
 elif user_vars["step"] == "sfm_solver":
@@ -144,7 +144,7 @@ elif user_vars["step"] == "sfm_solver":
   with open(os.path.join(user_vars["inputpath"], "Features_options.txt"), "r") as text_file_read:
    features_output = text_file_read.readline();
   text_file_read.close()
-  options_display = "Solver: " + options_solver + "; Filter: " + user_vars["matrix_filter"] + "; Camera model: " + user_vars["camera_model"] + "; Ratio: " + user_vars["ratio"] + "; " + features_output;
+  options_display = features_output + "SfM Solver: " + options_solver + "; Filter: " + user_vars["matrix_filter"] + "; Camera model: " + user_vars["camera_model"] + "; Ratio: " + user_vars["ratio"] + "; [EOL]";
    # Save options to file
   with open(os.path.join(user_vars["outputpath"],"Pipeline_Options.txt"), "w") as text_file_write:
    text_file_write.write(options_display)
@@ -197,15 +197,12 @@ elif user_vars["step"] == "cmvs":
   sys.stderr.write("PMVS output path:" + user_vars["output_dir"] + "PMVS/");
  else: 
   if still_working:
-   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "[MaxImageCountByCluster=100]"]
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), user_vars["max_imagecount"], user_vars["cpu"] ]
    pPMVS2 = subprocess.Popen(curr_string)
    pPMVS2.wait()
 
-   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "cmvs"), os.path.join(user_vars["output_dir"], "PMVS/"), "30"]
-   pPMVS3 = subprocess.Popen(curr_string)
-   pPMVS3.wait()
+   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "genOption"), os.path.join(user_vars["output_dir"], "PMVS/"), user_vars["level"], user_vars["csize"], user_vars["threshold"], user_vars["wsize"], user_vars["minImageNum"], user_vars["cpu"] ]
 
-   curr_string = [os.path.join(OPENMVG_PMVS_BIN, "genOption"), os.path.join(user_vars["output_dir"], "PMVS/")]
    pGenOption = subprocess.Popen(curr_string)
    pGenOption.wait()
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "PMVS/option-0000")), curr_string, "cmvs genOption")
@@ -221,7 +218,7 @@ elif user_vars["step"] == "cmvs":
    with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
     pipeline_output = text_file.readline()
    text_file.close()
-   options_display = "MVS: CMVS; Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; " + pipeline_output
+   options_display = pipeline_output + "MVS: CMVS; maxImagecount: " + user_vars["max_imagecount"] + "; cpu: " + user_vars["cpu"] + "; level: " + user_vars["level"] + "; csize: " + user_vars["csize"] + "; threshold: " + user_vars["threshold"] + "; wsize: " + user_vars["wsize"]+ "; minImageNum: " +  user_vars["minImageNum"]
    # Data output
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply end_path");
    print "options_used " + options_display + " end_options_used";
@@ -300,7 +297,7 @@ elif user_vars["step"] == "openMVS":
     with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
      pipeline_output = text_file.readline()
     text_file.close()
-    options_display = "MVS: OpenMVS Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; " + pipeline_output
+    options_display = pipeline_output + "MVS: OpenMVS Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; "
     # Data output
     print "preview_path " + os.path.join(user_vars["output_dir"],"scene_dense_mesh_texture.ply end_path");
     print "options_used " + options_display + " end_options_used";

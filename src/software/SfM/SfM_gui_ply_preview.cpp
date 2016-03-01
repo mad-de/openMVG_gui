@@ -1,88 +1,82 @@
-#include <pcl/visualization/cloud_viewer.h>
 #include <iostream>
-#include <pcl/io/io.h>
+
+#include <boost/thread/thread.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <pcl/common/common_headers.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/io/ply_io.h>
-#include <fstream>
-#include <string> 
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/console/parse.h>
 using namespace std;
-    
-int user_data;
-    
-void viewerOneOff (pcl::visualization::PCLVisualizer& viewer)
+
+bool fexists(const std::string& filename) 
 {
-    // Set Background to black
-    viewer.setBackgroundColor(0.0, 0.0, 0.0);
-
-    // Automatically set camera position - switch to manual camera position until viewer.removeOrientationMarkerWidgetAxes(); works.
-    // viewer.initCameraParameters();
-
-    // Manually set camera position 
-    double PositionX = 2;
-    double PositionY = 0;
-    double PositionZ = -2;
-    double FocalPointX = 1;
-    double FocalPointY = 0;
-    double FocalPointZ = 0;
-    double ViewUpX = 0;
-    double ViewUpY = -1;
-    double ViewUpZ = 0;
-    int Viewpoint = 0;
-    viewer.setCameraPosition(PositionX, PositionY, PositionZ, FocalPointX, FocalPointY, FocalPointZ, ViewUpX, ViewUpY, ViewUpZ, Viewpoint);
-    viewer.updateCamera(); 
-}
-
-void FileNotFound (pcl::visualization::PCLVisualizer& viewer)
-{
-    viewer.addText ("Preview file could not be found.", 200, 300, "text", 0);
-}
-
-void viewerIteration (pcl::visualization::PCLVisualizer& viewer)
-{
-    //FIXME: possible race condition here:
-    user_data++;
-}
-
-bool fexists(const std::string& filename) {
     ifstream ifile(filename.c_str());
     if ( !ifile.is_open() ) { return false; }
     else { return true; }
 }
 
+// --------------
+// -----Main-----
+// --------------
 int main(int argc, char *argv[])
 {
-    // Get the variables
-    string input_file, title;
+    string input_file, title, options, view;
+    int pos;
     for(unsigned i = 1; i != argc; i++)
     { 
 	if (string(argv[i]) == "-i")
+    	{
+	    input_file = string(argv[i+1]);
+        }
+        else if (string(argv[i]) == "-t")
 	{
-	    input_file = string(argv[2]);
+	    title = string(argv[i+1]);
 	}
-	else if (string(argv[i]) == "-t")
+	else if (string(argv[i]) == "-o")
 	{
-	    title = string(argv[4]);
+	    options = string(argv[i+1]);
+	    boost::replace_all(options, "[EOL]", "\n");
 	}
     }
-    // Generate Point Cloud Viewer
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-    pcl::io::loadPLYFile (input_file, *cloud);
-    pcl::visualization::CloudViewer viewer(title);
-    //blocks until the cloud is actually rendered
-    viewer.showCloud(cloud);
 
-    if (!fexists(input_file))
+    // Load point cloud
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+    pcl::io::loadPLYFile(input_file, *cloud);
+
+    // Display point cloud
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer (title));
+    viewer->setBackgroundColor (0, 0, 0);
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> rgb(cloud);
+    viewer->addPointCloud<pcl::PointXYZRGBA> (cloud, rgb, "ply cloud");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ply cloud");
+
+    // Set manual camera position for demo files
+    if (input_file.find("ImageDataset_SceauxCastle") != string::npos)
     {
-	viewer.runOnVisualizationThreadOnce (FileNotFound);
+	double PositionX = 2; double PositionY = 0; double PositionZ = -2; double FocalPointX = 1; double FocalPointY = 0; double FocalPointZ = 0; double ViewUpX = 0; double ViewUpY = -1; double ViewUpZ = 0; int Viewpoint = 0;
+	viewer->setCameraPosition(PositionX, PositionY, PositionZ, FocalPointX, FocalPointY, FocalPointZ, ViewUpX, ViewUpY, ViewUpZ, Viewpoint);
+	viewer->updateCamera(); 
     }
     else
     {
-	// call once
-	viewer.runOnVisualizationThreadOnce (viewerOneOff);
+    	viewer->initCameraParameters ();
     }
 
-    while (!viewer.wasStopped ())
+    // Display warning if file is not existent, otherwise display options
+    if (!fexists(input_file))
     {
-	user_data++;
+	viewer->addText ("Preview file could not be found.", 200, 300, "error", 0);
     }
-    return 0;
+    else
+    {
+    	viewer->addText (options, 5, 20, "options", 0);
+    }
+
+    // Main loop
+    while (!viewer->wasStopped ())
+    {
+	viewer->spinOnce ();
+	boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+    }
 }
