@@ -38,9 +38,11 @@ QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; b
 // Global functions
 QString get_num_of_CPUs()
 {
-unsigned int sys_numCPUs = std::thread::hardware_concurrency();
-QString get_numCPUs = QString::number(sys_numCPUs);
-return get_numCPUs;
+    // Estimate how many threads we can run
+    unsigned int sys_numCPUs = std::thread::hardware_concurrency();
+    QString get_numCPUs = QString::number(sys_numCPUs);
+    if (get_numCPUs == "0") { get_numCPUs = "6"; }
+    return get_numCPUs;
 }
 
 void launchPreview(QString preview_file, QString title, QString options)
@@ -78,7 +80,8 @@ OMVGguiWizard::OMVGguiWizard(QWidget *parent)
     resize(QDesktopWidget().availableGeometry(this).size() * 0.7);
 
     connect(this, SIGNAL(helpRequested()), this, SLOT(showHelp()));
-
+    setOption(QWizard::NoCancelButton, true);
+    // set Window title
     setWindowTitle(tr("Open MVG gui for SfM workflow"));
 }
 
@@ -159,9 +162,12 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     command->setEnabled(false);
     command->QWidget::hide();
     btnProcess = new QPushButton(tr("Run"));
+    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnCancel = new QPushButton(tr("Cancel"));
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    btnProcess->setEnabled(false);
     TerminalMode = new QCheckBox(tr("Terminal Mode (Expert Users)"));
     TerminalMode->QWidget::hide();
-    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
     input_fields = new QGridLayout;
     CameraSelLabel = new QLabel(tr("[SfMInit_ImageListing] Camera Model:"));
@@ -223,6 +229,7 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
     advanced_options->addWidget(command, 6, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
+    terminal_fields->addWidget(btnCancel, 0, 7);
     terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     terminal_fields->addWidget(txtReport, 1, 0, 1, 9);
@@ -237,6 +244,7 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
 
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
+    connect(btnCancel,SIGNAL(clicked()),this,SLOT(cancelProcess()));
     connect(AdvancedOptions, &QCheckBox::stateChanged, [this](int box_status) { btnAdvancedOptionsClicked(box_status); } );
     connect(TerminalMode, &QCheckBox::stateChanged, [this](int box_status) { btnTerminalModeClicked(box_status); } );
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
@@ -293,11 +301,23 @@ void Comp_FeaturesPage::showEvent(QShowEvent*)
     	wizard()->button(QWizard::NextButton)->setText(tr("Skip >"));
     }	
 
-    // Do we need the cancel button here? I don't think so...
-    wizard()->button(QWizard::CancelButton)->QWidget::hide();
     // Do we want the preview button here? Naaahhh....
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
 }
+void Comp_FeaturesPage::cancelProcess()
+{
+    process_command->terminate();
+    txtReport->setTextColor(Qt::red);
+    txtReport->append(tr("Process terminated by user"));
+    btnProcess->setText(tr("Run"));
+    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnProcess->setEnabled(true);
+    btnCancel->setEnabled(false);
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    wizard()->button(QWizard::NextButton)->setEnabled(true);
+    wizard()->button(QWizard::NextButton)->setText("Skip >");
+}
+
 
 void Comp_FeaturesPage::finished_demo_download()
 {
@@ -358,6 +378,8 @@ void Comp_FeaturesPage::btnProcessClicked()
     btnProcess->setText(tr("working"));
     btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(false);
+    btnCancel->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(true);
 
     QString str_command;
     txtReport->clear();
@@ -377,7 +399,6 @@ void Comp_FeaturesPage::rightMessage()
 	qDebug() << strdata_qstr.replace(QRegExp (" end_path.*"), "" );
 	OutputPath_finished->setText(strdata_qstr);
 	registerField("Comp_features_OutputPath", OutputPath_finished);
-	wizard()->button(QWizard::CustomButton1)->setEnabled(true);
 	qDebug() << strdata_qstr_output.replace(QRegExp ("output_path.*end_path"), "" );
 	// Insert
 	txtReport->moveCursor (QTextCursor::End);
@@ -395,6 +416,8 @@ void Comp_FeaturesPage::rightMessage()
     wizard()->button(QWizard::NextButton)->setEnabled(true);
     wizard()->button(QWizard::NextButton)->setText("Next >");
     btnProcess->setText(tr("Finished"));
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(false);
     registerField("Comp_Features_finished", btnProcess);
     }
 }
@@ -411,6 +434,8 @@ void Comp_FeaturesPage::wrongMessage()
     btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(false);
 }
 
 // Event: Advanced Options clicked
@@ -623,9 +648,12 @@ PipelinePage::PipelinePage(QWidget *parent)
     command->setEnabled(false);
     command->QWidget::hide();
     btnProcess = new QPushButton(tr("Run"));
+    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnCancel = new QPushButton(tr("Cancel"));
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(false);
     TerminalMode = new QCheckBox(tr("Terminal Mode (Advanced Users)"));
     TerminalMode->QWidget::hide();
-    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     CommandLabel = new QLabel(tr("Output:"));
 
     // Set up main Layout
@@ -684,7 +712,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
     advanced_options->addWidget(command, 8, 0, 1, 3);
 
-    terminal_fields->addWidget(CommandLabel, 0, 0);  
+    terminal_fields->addWidget(CommandLabel, 0, 0); 
+    terminal_fields->addWidget(btnCancel, 0, 7); 
     terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     terminal_fields->addWidget(txtReport, 1, 0, 1, 9);
@@ -703,6 +732,7 @@ PipelinePage::PipelinePage(QWidget *parent)
 
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
+    connect(btnCancel,SIGNAL(clicked()),this,SLOT(cancelProcess()));
     connect(AdvancedOptions, &QCheckBox::stateChanged, [this](int box_status) { btnAdvancedOptionsClicked(box_status); } );
     connect(TerminalMode, &QCheckBox::stateChanged, [this](int box_status) { btnTerminalModeClicked(box_status); } );
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
@@ -750,9 +780,6 @@ void PipelinePage::showEvent(QShowEvent*)
     qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + mvs_dir + "\"");
     command->setText(str_commando);
 
-    // Do we need the cancel button here? I don't think so...
-    wizard()->button(QWizard::CancelButton)->QWidget::hide();
-
     // Have we been here before? Set the paths accordingly
     if (field("PipelinePage_status").toString() == "init") 
     {
@@ -781,6 +808,22 @@ void PipelinePage::showEvent(QShowEvent*)
     {
 	wizard()->button(QWizard::CustomButton1)->setEnabled(false);	
     }
+    // Do we want the preview button here? Naaahhh....
+    wizard()->button(QWizard::CustomButton1)->setEnabled(false);
+}
+void PipelinePage::cancelProcess()
+{
+    process_command->terminate();
+    txtReport->setTextColor(Qt::red);
+    txtReport->append(tr("Process terminated by user"));
+    wizard()->button(QWizard::BackButton)->setEnabled(true);
+    btnProcess->setText(tr("Run"));
+    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnProcess->setEnabled(true);
+    btnCancel->setEnabled(false);
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    wizard()->button(QWizard::NextButton)->setEnabled(true);
+    wizard()->button(QWizard::NextButton)->setText("Skip >");
 }
 
 // Event: get paths
@@ -843,6 +886,8 @@ void PipelinePage::btnProcessClicked()
 	btnProcess->setText(tr("working"));
 	btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
 	btnProcess->setEnabled(false);
+	btnCancel->setEnabled(true);
+ 	btnCancel->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
 	wizard()->button(QWizard::CustomButton1)->setEnabled(false);	
 
 	QString str_command;
@@ -896,6 +941,8 @@ void PipelinePage::rightMessage()
 	wizard()->button(QWizard::NextButton)->setEnabled(true);
 	wizard()->button(QWizard::NextButton)->setText("Next >");
 	wizard()->button(QWizard::BackButton)->setEnabled(true);
+	btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+	btnCancel->setEnabled(false);
 	btnProcess->setText(tr("Finished"));
 	StatusPipelinePage->setText("finished");
 	registerField("PipelinePage_status", StatusPipelinePage);
@@ -913,6 +960,8 @@ void PipelinePage::wrongMessage()
     registerField("PipelinePage_status", StatusPipelinePage);
     // Re-enable Skip + Run Button Button
     enable_rerunning();
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(false);
 }
 
 // Event: Advanced Options clicked
@@ -1154,10 +1203,13 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     btnOutputPath->QWidget::hide();
     OutputLabel = new QLabel(tr("Output Folder:"));
     OutputLabel->QWidget::hide();
-    btnProcess = new QPushButton(tr("Run"));
     TerminalMode = new QCheckBox(tr("Terminal Mode (Expert Users)"));
     TerminalMode->QWidget::hide();
+    btnProcess = new QPushButton(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnCancel = new QPushButton(tr("Cancel"));
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(false);
     CommandLabel = new QLabel(tr("Output:"));
     // openMVS specific
     UseDensify = new QCheckBox(tr("[openmVS] Densify Point Cloud"));
@@ -1261,6 +1313,7 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
     advanced_options->addWidget(command, 14, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
+    terminal_fields->addWidget(btnCancel, 0, 7);
     terminal_fields->addWidget(btnProcess, 0, 8);
     txtReport->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     terminal_fields->addWidget(txtReport, 1, 0, 1, 9);
@@ -1279,6 +1332,7 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     registerField("MVSSelectorPage_status", StatusMVSSelectorPage);
 
     // connect general options
+    connect(btnCancel,SIGNAL(clicked()),this,SLOT(cancelProcess()));
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
     connect(btnInputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("inputpath"); });
@@ -1326,8 +1380,6 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     }
     get_standard_paths(command->text());
 
-    // Do we need the cancel button here? I don't think so...
-    wizard()->button(QWizard::CancelButton)->QWidget::hide();
     // Do we want the preview button here? Naaahhh....
     wizard()->button(QWizard::CustomButton1)->setEnabled(false);
     // Is there a Preview path already? Enable Preview button
@@ -1339,6 +1391,18 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     {
 	wizard()->button(QWizard::CustomButton1)->setEnabled(false);	
     }
+}
+void MVSSelectorPage::cancelProcess()
+{
+    process_command->terminate();
+    txtReport->setTextColor(Qt::red);
+    txtReport->append(tr("Process terminated by user"));
+    wizard()->button(QWizard::BackButton)->setEnabled(true);
+    btnProcess->setText(tr("Run"));
+    btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnProcess->setEnabled(true);
+    btnCancel->setEnabled(false);
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
 }
 
 // Get standard paths when changing menu entries
@@ -1399,6 +1463,8 @@ void MVSSelectorPage::btnProcessClicked()
     // Disable Skip button + Run Button + Preview button
     wizard()->button(QWizard::FinishButton)->setEnabled(false);
     wizard()->button(QWizard::BackButton)->setEnabled(false);
+    btnCancel->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+    btnCancel->setEnabled(true);
     btnProcess->setText(tr("working"));
     btnProcess->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(false);
@@ -1450,6 +1516,8 @@ void MVSSelectorPage::rightMessage()
 	btnProcess->setText(tr("Finished"));
    	StatusMVSSelectorPage->setText("finished");
 	registerField("MVSSelectorPage_status", StatusMVSSelectorPage);
+        btnCancel->setEnabled(false);
+        btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
     }
 }
 
@@ -1464,6 +1532,8 @@ void MVSSelectorPage::wrongMessage()
     btnProcess->setText(tr("Run"));
     btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
     btnProcess->setEnabled(true);
+    btnCancel->setEnabled(false);
+    btnCancel->setStyleSheet("border:2px solid #aaaaaa; background-color: #300a24; color: #ffffff;");
 }
 
 // Event: Advanced Options clicked

@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import re
+import Image
 
 # Initialize vars
 total_output = "Workflow finished.";
@@ -59,6 +60,21 @@ def check_for_empty_input_folder(folder):
  else:
   return True;
 
+# check if there are at least c valid images in folder
+def check_for_valid_images(num, folder):
+ found_images = 0;
+ for file in os.listdir(folder):
+  try:
+   if Image.open(os.path.join(folder, file)):
+    found_images += 1;
+  except IOError:
+    pass;
+ if found_images < num:
+  sys.stderr.write("The Process halted. The input folder contains less than " + str(num) + " images");
+  return False;
+ else:
+  return True;
+
 if user_vars["step"] == "comp_features":
  # Create paths if not existent
  if not os.path.exists(os.path.abspath(os.path.join(user_vars["outputpath"], os.pardir))):
@@ -66,10 +82,13 @@ if user_vars["step"] == "comp_features":
  if not os.path.exists(user_vars["outputpath"]):
   os.mkdir(user_vars["outputpath"])
 
+ # check if there are at least 3 valid images in folder
  still_working = check_for_empty_input_folder(user_vars["inputpath"]);
+ if still_working:
+  still_working = check_for_valid_images(3, user_vars["inputpath"]);
 
  # 1. Image listing - generate sfm_data.json
- if still_working:
+ if still_working: 
   curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", user_vars["inputpath"], "-o", user_vars["outputpath"], "-d", camera_file_params, "-c", user_vars["camera_model"] ]
   pIntrisics = subprocess.Popen(curr_string)
   pIntrisics.wait()
