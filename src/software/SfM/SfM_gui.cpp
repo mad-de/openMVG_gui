@@ -11,9 +11,9 @@ QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 QString outputpath = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images_out/matches/";
 
-QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=3 descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
+QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=\"3\" descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
 
-QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\" outputpath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"2\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=3 force=1";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\" outputpath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=\"3\" force=1";
 
 QString initialcommandline_mvs_openMVS = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
@@ -158,9 +158,9 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     input_fields = new QGridLayout;
     CameraSelLabel = new QLabel(tr("[SfMInit_ImageListing] Camera Model:"));
     CameraSel = new QComboBox;
-    CameraSel->addItem(tr("Pinhole"), QVariant(1));
-    CameraSel->addItem(tr("Pinhole radial 1"), QVariant(2));
-    CameraSel->addItem(tr("Pinhole radial 3 (default)"), QVariant(3));
+    CameraSel->addItem("Pinhole", QVariant(1));
+    CameraSel->addItem("Pinhole radial 1", QVariant(2));
+    CameraSel->addItem("Pinhole radial 3 (default)", QVariant(3));
     CameraSel->QWidget::hide();
     CameraSelLabel->QWidget::hide();
     DescrPresLabel = new QLabel(tr("[SfM_ComputeFeatures] Describer Preset:"));
@@ -185,6 +185,7 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     terminal_fields = new QGridLayout;    
 
     // Register fields of vars to use elsewhere.. (don't use an asterisk to not make it mandatory)
+    process_command = new QProcess();
     OutputPath_finished = new QLineEdit(outputpath);
     registerField("Comp_features_OutputPath", OutputPath_finished);
     registerField("Comp_Features_InputPath", InputPath);
@@ -228,14 +229,17 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
 
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
-    connect(btnInputPath,SIGNAL(clicked()),this,SLOT(btnInputPathClicked()));
-    connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
-    connect(btnOutputPath,SIGNAL(clicked()),this,SLOT(btnOutputPathClicked()));
-    connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
+    connect(AdvancedOptions, &QCheckBox::stateChanged, [this](int box_status) { btnAdvancedOptionsClicked(box_status); } );
+    connect(TerminalMode, &QCheckBox::stateChanged, [this](int box_status) { btnTerminalModeClicked(box_status); } );
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
-    connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_CameraSel_changed);
-    connect(DescrPres,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_DescrPres_changed);
-    connect(DescrMeth,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&Comp_FeaturesPage::on_DescrMeth_changed);
+    connect(btnOutputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("outputpath"); });
+    connect(btnInputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("inputpath"); });
+    connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "camera_model"); } );
+    connect(DescrPres,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "descr_pres"); } );
+    connect(DescrMeth,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "descr_meth"); } );
+    // processes
+    connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
+    connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
 }
 
 int Comp_FeaturesPage::nextId() const
@@ -338,68 +342,6 @@ void Comp_FeaturesPage::check_demo_path()
      btnProcess->setEnabled(true);
 }
 
-// Event: Select Input path
-void Comp_FeaturesPage::btnInputPathClicked()
-{
-    QString str_get_commando;
-
-    str_get_commando = InputPath->text();
-
-	QString InputFolder;
-	
-	InputFolder = QFileDialog::getExistingDirectory(
-    this, 
-    tr("Choose folder containing your input images"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
-    // change Folder according to selection in input field
-    InputPath->setText(InputFolder);
-    // changes inputpath="..." to new inputpath in exec field
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + InputFolder + "\"");
-    command->setText(str_commando);
-
-    // Have we been here before? Enable re-running
-    if(field("Comp_Features_finished").toString() == "false") {
-	btnProcess->setText(tr("Run"));
-	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
-	btnProcess->setEnabled(true);
-    }
-}
-
-// Event: Select Output path
-void Comp_FeaturesPage::btnOutputPathClicked()
-{
-    QString str_get_commando;
-
-    str_get_commando = OutputPath->text();
-
-	QString OutputFolder;
-	
-	OutputFolder = QFileDialog::getExistingDirectory(
-    this, 
-    tr("Choose folder to export the matches files to"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
-    // change Folder according to selection in input field
-    OutputPath->setText(OutputFolder);
-    // changes outputpath="..." to new outputpath in exec field
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + OutputFolder + "\"");
-    command->setText(str_commando);
-
-    // Have we been here before? Enable re-running
-    if(field("Comp_Features_finished").toString() == "false") {
-	btnProcess->setText(tr("Run"));
-	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
-	btnProcess->setEnabled(true);
-    }
-}
-
 // Event: Click Run
 void Comp_FeaturesPage::btnProcessClicked()
 {
@@ -412,11 +354,7 @@ void Comp_FeaturesPage::btnProcessClicked()
     QString str_command;
     txtReport->clear();
     str_command = command->text();
-    process_command = new QProcess();
     process_command->start("/bin/bash", QStringList() << "-c" << QString(str_command));
-  
-    connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
-    connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
 }
 
 // Handle regular output
@@ -468,9 +406,10 @@ void Comp_FeaturesPage::wrongMessage()
 }
 
 // Event: Advanced Options clicked
-void Comp_FeaturesPage::btnAdvancedOptionsClicked()
+void Comp_FeaturesPage::btnAdvancedOptionsClicked(int checkstate)
 {
-    if (AdvancedOptions->checkState() == Qt::Checked) {
+    if (checkstate) 
+    {
 	//Show all the Advanced Options
 	command->setEnabled(true);
 	TerminalMode->QWidget::show();
@@ -484,7 +423,8 @@ void Comp_FeaturesPage::btnAdvancedOptionsClicked()
 	btnOutputPath->QWidget::show();
 	OutputLabel->QWidget::show();
     }
-    else {
+    else 
+    {
 	// Hide all the Advanced options + command
 	TerminalMode->QWidget::hide();
 	TerminalMode->QCheckBox::setChecked(false);
@@ -503,16 +443,48 @@ void Comp_FeaturesPage::btnAdvancedOptionsClicked()
 }
 
 // Event: Terminal Mode clicked
-void Comp_FeaturesPage::btnTerminalModeClicked()
+void Comp_FeaturesPage::btnTerminalModeClicked(int checkstate)
 {
-    if (TerminalMode->checkState() == Qt::Checked) {
+    if (checkstate) 
+    {
 	command->setEnabled(true);
 	command->QWidget::show();
     }
-    else {
+    else 
+    {
 	command->setEnabled(false);
 	command->QWidget::hide();
     }
+}
+
+// Event: paths changed
+void Comp_FeaturesPage::btnPathbuttonsClicked(QString mode)
+{
+    QString str_get_commando;
+    QString Folder;
+    QString selection_descr;
+
+    if (mode == "inputpath") { str_get_commando = InputPath->text(); selection_descr = tr("Choose folder containing your sfmdata.json file"); }
+    else if (mode == "outputpath") { str_get_commando = OutputPath->text(); selection_descr = tr("Choose output folder"); }
+
+    // launch selection menu
+    Folder = QFileDialog::getExistingDirectory(this, selection_descr, str_get_commando, QFileDialog::ShowDirsOnly |QFileDialog::DontUseNativeDialog);
+
+    QString str_commando;
+    str_commando = command->text();
+    // change both parts if inputpath
+    qDebug() << str_commando.replace(QRegExp (mode + "=\"([^\"]*)\""), mode + "=\"" + Folder + "/\"");
+    if (mode == "inputpath") 
+    {  
+	qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + Folder + "_out/matches/\"");
+    }
+    command->setText(str_commando);
+
+    if (mode == "inputpath") { InputPath->setText(Folder + "/"); OutputPath->setText(Folder + "_out/matches/");}
+    else if (mode == "outputpath") { OutputPath->setText(Folder + "/"); }
+
+    // Have we been here before? Enable re-running
+    enable_run_again();
 }
 
 // Event: Field command changed --> Enable run (Assume, whoever clicks that knows what he's doing)
@@ -523,36 +495,31 @@ void Comp_FeaturesPage::fldcommandClicked()
     btnProcess->setEnabled(true);
 }
 
-
-// Event: Camera type changed
-void Comp_FeaturesPage::on_CameraSel_changed()
+// Event: Selector changed
+void Comp_FeaturesPage::on_selectors_changed(QString selection_string, QString option_decl)
 {
-    QString get_SelItem = CameraSel->itemData(CameraSel->currentIndex()).toString();
+    
+    if (selection_string == "Pinhole") { selection_string = "1"; }
+    if (selection_string == "Pinhole radial 1") { selection_string = "2"; }
+    if (selection_string == "Pinhole radial 3 (default)") { selection_string = "3"; }
 
     QString str_commando = command->text();
-    qDebug() << str_commando.replace(QRegExp ("camera_model=([^\"]*)"), "camera_model=" + get_SelItem);
+    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + selection_string + "\"");
     command->setText(str_commando);
+
+    enable_run_again();
 }
 
-// Event: Describer Preset changed
-void Comp_FeaturesPage::on_DescrPres_changed()
+// Have we been here before? Enable running again
+void Comp_FeaturesPage::enable_run_again()
 {
-    QString get_SelItem = DescrPres->currentText();
-
-    QString str_commando = command->text();
-    qDebug() << str_commando.replace(QRegExp ("descr_pres=\"([^\"]*)\""), "descr_pres=\"" + get_SelItem + "\"");
-    command->setText(str_commando);
+    if(field("Comp_Features_finished").toString() == "false") {
+	btnProcess->setText(tr("Run"));
+	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
+	btnProcess->setEnabled(true);
+    }
 }
 
-// Event: Describer Method changed
-void Comp_FeaturesPage::on_DescrMeth_changed()
-{
-    QString get_SelItem = DescrMeth->currentText();
-
-    QString str_commando = command->text();
-    qDebug() << str_commando.replace(QRegExp ("descr_meth=\"([^\"]*)\""), "descr_meth=\"" + get_SelItem + "\"");
-    command->setText(str_commando);
-}
 // PAGE
 // Pipelines
 // PAGE
@@ -723,20 +690,29 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Finalize
     setLayout(main_grid);
 
+    // Initialize process
+    process_command = new QProcess();
+
     // Connect buttons with processes
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
-    connect(btnInputPath,SIGNAL(clicked()),this,SLOT(btnInputPathClicked()));
-    connect(btnOutputPath,SIGNAL(clicked()),this,SLOT(btnOutputPathClicked()));
-    connect(btnImagesFolderPath,SIGNAL(clicked()),this,SLOT(btnImagesFolderPathClicked()));
-    connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
-    connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
+    connect(AdvancedOptions, &QCheckBox::stateChanged, [this](int box_status) { btnAdvancedOptionsClicked(box_status); } );
+    connect(TerminalMode, &QCheckBox::stateChanged, [this](int box_status) { btnTerminalModeClicked(box_status); } );
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
-    connect(solverImage1Button,SIGNAL(clicked()),this,SLOT(on_solverImage1Button_clicked()));
-    connect(solverImage2Button,SIGNAL(clicked()),this,SLOT(on_solverImage2Button_clicked()));
-    connect(PipelineSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&PipelinePage::on_PipelineSel_changed);
+    // Paths
+    connect(btnInputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("inputpath"); });
+    connect(btnOutputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("outputpath"); });
+    connect(btnImagesFolderPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("imagespath"); });
+    connect(solverImage1Button, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("image1"); });
+    connect(solverImage2Button, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("image2"); });
+    // various
     connect(sliderRatio, SIGNAL(valueChanged(int)),this, SLOT(setRatio(int)));
-    connect(MatrixSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&PipelinePage::on_MatrixFilter_changed);
-    connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&PipelinePage::on_CameraSel_changed);
+    // selectors
+    connect(CameraSel,static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int selection_num) { on_selectors_changed(selection_num, "camera_model"); } );
+    connect(MatrixSel,static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int selection_num) { on_selectors_changed(selection_num, "matrix_filter"); } );
+    connect(PipelineSel,static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int selection_num) { on_selectors_changed(selection_num, "solver"); } );
+    // Processes
+    connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
+    connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
 }
 
 int PipelinePage::nextId() const
@@ -799,89 +775,46 @@ void PipelinePage::showEvent(QShowEvent*)
     }
 }
 
-// Event: Select Input path
-void PipelinePage::btnInputPathClicked()
+// Event: get paths
+void PipelinePage::btnPathbuttonsClicked(QString mode)
 {
     QString str_get_commando;
+    QString path;
+    QString selection_descr;
+    QString search_dir;
 
-    str_get_commando = InputPath->text();
+    // Event: Select Images
+    if ((mode == "image1") or (mode == "image2")) 
+    { 
+	QString file = QFileDialog::getOpenFileName(this, tr("Choose an image to initialize matching"), field("Comp_Features_InputPath").toString(), selfilter_images);
+        QFileInfo filepath(file); 
+        path = filepath.fileName();
+    }
+    // Event: Select folders
+    else 
+    { 
+	if (mode == "imagespath") { selection_descr = tr("Choose folder containing your input images"); search_dir = ImagesFolderPath->text(); }
+	if (mode == "inputpath") { selection_descr = tr("Choose matching folder (contains the JSON file)"); search_dir = InputPath->text(); }
+	if (mode == "outputpath") { selection_descr = tr("Choose folder to export the matches files to"); search_dir = OutputPath->text(); }
 
-    QString InputFolder;
-	
-    InputFolder = QFileDialog::getExistingDirectory(
-    this,
-    tr("Choose matching folder (contains the JSON file)"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
+	path = QFileDialog::getExistingDirectory(this, selection_descr, search_dir, QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
+    }
 
-    // change Folder according to selection in input field
-    InputPath->setText(InputFolder);
-    // changes inputpath="..." to new inputpath in exec field
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + InputFolder + "\"");
-    qDebug() << str_commando.replace(QRegExp ("matchespath=\"([^\"]*)\""), "matchespath=\"" + InputFolder + "\"");
-    command->setText(str_commando);
+    if (mode == "image1") { solverImage1->setText(path); }
+    if (mode == "image2") { solverImage2->setText(path); }
+    if (mode == "imagespath") { ImagesFolderPath->setText(path); }
+    if (mode == "inputpath") { InputPath->setText(path); }
+    if (mode == "outputpath") { OutputPath->setText(path); }
 
-    enable_run_again();
-}
-
-// Event: Select Output path
-void PipelinePage::btnOutputPathClicked()
-{
-    QString str_get_commando;
-
-    str_get_commando = OutputPath->text();
-
-	QString OutputFolder;
-	
-	OutputFolder = QFileDialog::getExistingDirectory(
-    this, 
-    tr("Choose folder to export the matches files to"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
-    // change Folder according to selection in input field
-    OutputPath->setText(OutputFolder);
-    // changes outputpath="..." to new outputpath in exec field
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + OutputFolder + "\"");
+    // replace vars
+    QString str_commando = command->text();
+    qDebug() << str_commando.replace(QRegExp (mode + "=\"([^\"]*)\""), mode + "=\"" + path + "\"");
+    // change matchespath as well, when inputpath
+    if (mode == "inputpath") { mode = "matchespath";  qDebug() << str_commando.replace(QRegExp (mode + "=\"([^\"]*)\""), mode + "=\"" + path + "\""); }
     command->setText(str_commando);
 
     // Have we been here before? Enable re-running
-    if(field("Comp_Features_finished").toString() == "false") {
-	btnProcess->setText(tr("Run"));
-	btnProcess->setStyleSheet("border:2px solid #f07b4c; background-color: #300a24; color: #ffffff;");
-	btnProcess->setEnabled(true);
-    }
-}
-
-// Event: Select Images Folder path
-void PipelinePage::btnImagesFolderPathClicked()
-{
-    QString str_get_commando;
-
-    str_get_commando = InputPath->text();
-
-	QString InputFolder;
-	
-	InputFolder = QFileDialog::getExistingDirectory(
-    this, 
-    tr("Choose folder containing your input images"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
-    // change Folder according to selection in input field
-    ImagesFolderPath->setText(InputFolder);
-    // changes inputpath="..." to new inputpath in exec field
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("imagespath=\"([^\"]*)\""), "imagespath=\"" + InputFolder + "\"");
-    command->setText(str_commando);
-
-    enable_run_again();
+    enable_rerunning();
 }
 
 // Event: Click Run
@@ -907,11 +840,7 @@ void PipelinePage::btnProcessClicked()
 	QString str_command;
 	txtReport->clear();
 	str_command = command->text();
-	process_command = new QProcess();
 	process_command->start("/bin/bash", QStringList() << "-c" << QString(str_command));
-
-	connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
-	connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
     }
 }
 
@@ -979,9 +908,9 @@ void PipelinePage::wrongMessage()
 }
 
 // Event: Advanced Options clicked
-void PipelinePage::btnAdvancedOptionsClicked()
+void PipelinePage::btnAdvancedOptionsClicked(int checkstate)
 {
-    if (AdvancedOptions->checkState() == Qt::Checked) 
+    if (checkstate) 
     {
 	//Show all the Advanced Options
 	command->setEnabled(true);
@@ -1034,13 +963,15 @@ void PipelinePage::btnAdvancedOptionsClicked()
 }
 
 // Event: Terminal Mode clicked
-void PipelinePage::btnTerminalModeClicked()
+void PipelinePage::btnTerminalModeClicked(int checkstate)
 {
-    if (TerminalMode->checkState() == Qt::Checked) {
+    if (checkstate)
+    {
 	command->setEnabled(true);
 	command->QWidget::show();
     }
-    else {
+    else 
+    {
 	command->setEnabled(false);
 	command->QWidget::hide();
     }
@@ -1054,153 +985,81 @@ void PipelinePage::fldcommandClicked()
     btnProcess->setEnabled(true);
 }
 
-// Event: Select Image1
-void PipelinePage::on_solverImage1Button_clicked()
+// Event: Selector changed
+void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 {
-    QString str_get_basepath;
-
-    str_get_basepath = field("Comp_Features_InputPath").toString();
-
-    QString file = QFileDialog::getOpenFileName(
-    this,
-    tr("Choose an image to initialize matching"),
-    str_get_basepath,
-    selfilter_images
-    );
-
-    // get filename
-
-    QFileInfo filepath(file);
-    QString filename = filepath.fileName();
-
-    solverImage1->setText(filename);
-    // changes images
     QString str_commando = command->text();
+    QString replace_char;
 
-    qDebug() << str_commando.replace(QRegExp ("image1=\"([^\"]*)\""), "image1=\"" + filename + "\"");
-
-    command->setText(str_commando);
-
-    enable_run_again();
-}
-
-// Event: Select Image2
-void PipelinePage::on_solverImage2Button_clicked()
-{
-    QString str_get_basepath;
-
-    str_get_basepath = field("Comp_Features_InputPath").toString();
-
-    QString file = QFileDialog::getOpenFileName(
-    this,
-    tr("Choose an image to initialize matching"),
-    str_get_basepath,
-    selfilter_images
-    );
-
-    // get filename
-
-    QFileInfo filepath(file);
-    QString filename = filepath.fileName();
-
-    solverImage2->setText(filename);
-    // changes images
-    QString str_commando = command->text();
-
-    qDebug() << str_commando.replace(QRegExp ("image2=\"([^\"]*)\""), "image2=\"" + filename + "\"");
-
-    command->setText(str_commando);
-
-    enable_run_again();
-}
-
-// Event: Pipeline Selector changed
-void PipelinePage::on_PipelineSel_changed()
-{
-    QString get_SelItem = PipelineSel->itemData(PipelineSel->currentIndex()).toString();
-
-    QString str_commando = command->text();
-
-    qDebug() << str_commando.replace(QRegExp ("solver=\"([^\"]*)\""), "solver=\"" + get_SelItem + "\"");
-    
-    // Dirty: hide non-affected options, show affected for Global SfM
-    if(get_SelItem == "2")
-    {
-	// Show Matrix selector, hide Imagesfolder
-	if(AdvancedOptions->checkState() == Qt::Checked)
+    // Event: Pipeline Selector changed
+    if (option_decl == "solver")
+    {  
+	replace_char = QString::number(selection_num);
+	// Dirty: hide non-affected options, show affected for Global SfM
+	if(selection_num == 1)
 	{
-	    MatrixSel->QWidget::show();
-	    MatrixSelLabel->QWidget::show();
-	    ImagesFolderLabel->QWidget::hide();
-	    ImagesFolderPath->QWidget::hide();
-	    btnImagesFolderPath->QWidget::hide();
-	    CameraSel->QWidget::hide();
-   	    CameraSelLabel->QWidget::hide();
-	}
-	solverImage1->QWidget::hide();
-	solverImage1Button->QWidget::hide();
-	solverImage1Label->QWidget::hide();
-	solverImage2->QWidget::hide();
-	solverImage2Button->QWidget::hide();
-	solverImage2Label->QWidget::hide();
-        image_selector_grid_descr->QWidget::hide();
-	// Change matrix selector according to Pipeline (Incremental: g, Global: e)
-        MatrixSel->setCurrentIndex(2);
-	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"e\"");
-    }
+	    // Show Matrix selector, hide Imagesfolder
+	    if(AdvancedOptions->checkState() == Qt::Checked)
+	    {
+		MatrixSel->QWidget::show();
+		MatrixSelLabel->QWidget::show();
+		ImagesFolderLabel->QWidget::hide();
+		ImagesFolderPath->QWidget::hide();
+		btnImagesFolderPath->QWidget::hide();
+		CameraSel->QWidget::hide();
+		CameraSelLabel->QWidget::hide();
+	    }
 
-    // Dirty: show non-affected options for Incremental SfM
-    else if(get_SelItem == "1")
-    {
-	// Hide Matrix selector + show Images
-	if(AdvancedOptions->checkState() == Qt::Checked)
+	    solverImage1->QWidget::hide();
+	    solverImage1Button->QWidget::hide();
+	    solverImage1Label->QWidget::hide();
+	    solverImage2->QWidget::hide();
+	    solverImage2Button->QWidget::hide();
+	    solverImage2Label->QWidget::hide();
+	    image_selector_grid_descr->QWidget::hide();
+	    // Change matrix selector according to Pipeline (Incremental: g, Global: e)
+	    MatrixSel->setCurrentIndex(2);
+	    qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"e\"");
+	}
+
+	// Dirty: show non-affected options for Incremental SfM
+	else if(selection_num == 0)
 	{
-	    MatrixSel->QWidget::show();
-	    MatrixSelLabel->QWidget::show();
-	    ImagesFolderLabel->QWidget::show();
-	    ImagesFolderPath->QWidget::show();
-	    btnImagesFolderPath->QWidget::show();
-	    CameraSel->QWidget::show();
-   	    CameraSelLabel->QWidget::show();
+	    // Hide Matrix selector + show Images
+	    if(AdvancedOptions->checkState() == Qt::Checked)
+	    {
+		MatrixSel->QWidget::show();
+		MatrixSelLabel->QWidget::show();
+		ImagesFolderLabel->QWidget::show();
+		ImagesFolderPath->QWidget::show();
+		btnImagesFolderPath->QWidget::show();
+		CameraSel->QWidget::show();
+		CameraSelLabel->QWidget::show();
+	    }
+	    solverImage1->QWidget::show();
+	    solverImage1Button->QWidget::show();
+	    solverImage1Label->QWidget::show();
+	    solverImage2->QWidget::show();
+	    solverImage2Button->QWidget::show();
+	    solverImage2Label->QWidget::show();
+            image_selector_grid_descr->QWidget::show();
+	    // Change matrix selector according to Pipeline (Incremental: g, Global: e)
+            MatrixSel->setCurrentIndex(1);
+	    qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"f\"");
 	}
-	solverImage1->QWidget::show();
-	solverImage1Button->QWidget::show();
-	solverImage1Label->QWidget::show();
-	solverImage2->QWidget::show();
-	solverImage2Button->QWidget::show();
-	solverImage2Label->QWidget::show();
-        image_selector_grid_descr->QWidget::show();
-	// Change matrix selector according to Pipeline (Incremental: g, Global: e)
-        MatrixSel->setCurrentIndex(1);
-	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"f\"");
     }
-    command->setText(str_commando);
-
-    enable_run_again();
-}
-
-// Event: Matrix Filter changed
-void PipelinePage::on_MatrixFilter_changed()
-{
-    QString get_SelItem = MatrixSel->itemData(MatrixSel->currentIndex()).toString();
-
-    QString str_commando = command->text();
-    
-    // Option 1 = e
-    if(get_SelItem == "1")
+    // Event: Pipeline Selector changed
+    else if (option_decl == "matrix_filter")
     {
-	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"e\"");
+	if(selection_num == 0) { replace_char = "e"; }
+	else if(selection_num == 1) { replace_char = "f"; }
+	else if(selection_num == 2) { replace_char = "h"; }
     }
-    // Option 2 = f
-    if(get_SelItem == "2")
-    {
-	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"f\"");
-    }
-    // Option 2 = h
-    if(get_SelItem == "3")
-    {
-	qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"h\"");
-    }
+    // Event: Camera changed
+    else if (option_decl == "camera_model") { replace_char = QString::number(selection_num+1); }
+
+    // general replace
+    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + replace_char + "\"");
     command->setText(str_commando);
 
     enable_run_again();
@@ -1223,18 +1082,6 @@ void PipelinePage::setRatio(int value)
 
     enable_run_again();
 }
-// Event: Camera type changed
-void PipelinePage::on_CameraSel_changed()
-{
-    QString get_SelItem = CameraSel->itemData(CameraSel->currentIndex()).toString();
-
-    QString str_commando = command->text();
-    qDebug() << str_commando.replace(QRegExp ("camera_model=([^\"]*)"), "camera_model=" + get_SelItem);
-    command->setText(str_commando);
-
-    enable_run_again();
-}
-
 // Enable re-running Selector changed
 void PipelinePage::enable_rerunning()
 {
@@ -1419,36 +1266,32 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     setLayout(main_grid);
   
    // Register fields
+    process_command = new QProcess();
     StatusMVSSelectorPage = new QLineEdit("init");
     registerField("MVSSelectorPage_status", StatusMVSSelectorPage);
 
-    // Connect buttons with processes
+    // connect general options
     connect(btnProcess,SIGNAL(clicked()),this,SLOT(btnProcessClicked()));
-    connect(btnInputPath,SIGNAL(clicked()),this,SLOT(btnInputPathClicked()));
-    connect(btnOutputPath,SIGNAL(clicked()),this,SLOT(btnOutputPathClicked()));
-    connect(AdvancedOptions,SIGNAL(clicked()),this,SLOT(btnAdvancedOptionsClicked()));
-    connect(TerminalMode,SIGNAL(clicked()),this,SLOT(btnTerminalModeClicked()));
     connect(command,SIGNAL(textEdited(QString)),this,SLOT(fldcommandClicked()));
-    connect(MVSSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged),this,&MVSSelectorPage::on_MVSSel_changed);
-    connect(UseDensify,SIGNAL(clicked()),this,SLOT(btnUseDensifyClicked()));
-    connect(UseRefine,SIGNAL(clicked()),this,SLOT(btnUseRefineClicked()));
-    // mapper for CMVS options
-    pmvsOptionsmapper = new QSignalMapper( this );
-    connect(pmvsOptionsmapper, SIGNAL(mapped(QString)), this, SLOT(pmvsOptionsclicked(QString)));
-    pmvsOptionsmapper->setMapping(ImageCount, "max_imagecount");
-    pmvsOptionsmapper->setMapping(numCPU, "cpu");
-    pmvsOptionsmapper->setMapping(level, "level");
-    pmvsOptionsmapper->setMapping(csize, "csize");
-    pmvsOptionsmapper->setMapping(threshold, "threshold");
-    pmvsOptionsmapper->setMapping(wsize, "wsize");
-    pmvsOptionsmapper->setMapping(minImage, "minImageNum");
-    connect(ImageCount, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(numCPU, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(level, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(csize, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(threshold, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(wsize, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
-    connect(minImage, SIGNAL(textEdited(QString)), pmvsOptionsmapper, SLOT(map()));
+    connect(btnInputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("inputpath"); });
+    connect(btnOutputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("output_dir"); });
+    connect(AdvancedOptions, &QCheckBox::stateChanged, [this](int box_status) { MVSSelectorPage::btnAdvancedOptionsClicked(box_status); } );
+    connect(TerminalMode, &QCheckBox::stateChanged, [this](int box_status) { MVSSelectorPage::btnTerminalModeClicked(box_status); } );
+    connect(MVSSel,static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int selection_num) { MVSSelectorPage::on_MVSSel_changed(selection_num); } );
+    // connect openMVS options
+    connect(UseDensify, &QCheckBox::stateChanged, [this](int box_status) { MVSSelectorPage::btnUseopenMVSoptionsClicked(box_status, "use_densify"); } );
+    connect(UseRefine, &QCheckBox::stateChanged, [this](int box_status) { MVSSelectorPage::btnUseopenMVSoptionsClicked(box_status, "use_refine"); } );
+    // connect PMVS options
+    connect(ImageCount, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "max_imagecount"); } );
+    connect(numCPU, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "cpu"); } );
+    connect(level, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "level"); } );
+    connect(csize, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "csize"); } );
+    connect(threshold, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "threshold"); } );
+    connect(wsize, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "wsize"); } );
+    connect(minImage, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "minImageNum"); } );
+    // connect output
+    connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
+    connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
 }
 
 int MVSSelectorPage::nextId() const
@@ -1490,7 +1333,7 @@ void MVSSelectorPage::showEvent(QShowEvent*)
     }
 }
 
-// Enable re-running
+// Get standard paths when changing menu entries
 void MVSSelectorPage::get_standard_paths(QString str_commando)
 {
     // set inputpath + outputpath accordingly
@@ -1516,59 +1359,31 @@ void MVSSelectorPage::enable_rerunning()
     }
 }
 
-// Event: Select Input path
-void MVSSelectorPage::btnInputPathClicked()
+// Event: path
+void MVSSelectorPage::btnPathbuttonsClicked(QString mode)
 {
     QString str_get_commando;
+    QString Folder;
+    QString selection_descr;
 
-    str_get_commando = InputPath->text();
+    if (mode == "inputpath") { str_get_commando = InputPath->text(); selection_descr = tr("Choose folder containing your sfmdata.json file"); }
+    else if (mode == "output_dir") { str_get_commando = OutputPath->text(); selection_descr = tr("Choose output folder"); }
 
-	QString InputFolder;
-	
-	InputFolder = QFileDialog::getExistingDirectory(
-    this, 
-    tr("Choose folder containing your input images"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
-    // change Folder according to selection in input field
-    InputPath->setText(InputFolder);
-    // changes inputpath="..." to new inputpath in exec field
+    // launch selection menu
+    Folder = QFileDialog::getExistingDirectory(this, selection_descr, str_get_commando, QFileDialog::ShowDirsOnly |QFileDialog::DontUseNativeDialog) + "/";
+
+    if (mode == "inputpath") { InputPath->setText(Folder); }
+    else if (mode == "output_dir") { OutputPath->setText(Folder); }
+
     QString str_commando;
     str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("inputpath=\"([^\"]*)\""), "inputpath=\"" + InputFolder + "\"");
+    qDebug() << str_commando.replace(QRegExp (mode + "=\"([^\"]*)\""), mode + "=\"" + Folder + "\"");
     command->setText(str_commando);
 
     // Have we been here before? Enable re-running
     enable_rerunning();
 }
 
-// Event: SelectOutput path
-void MVSSelectorPage::btnOutputPathClicked()
-{
-    QString str_get_commando;
-
-    str_get_commando = OutputPath->text();
-
-	QString OutputFolder;
-	
-	OutputFolder = QFileDialog::getExistingDirectory(
-    this, 
-    tr("Choose output folder"),
-    str_get_commando,
-    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog) + "/";
-    // change Folder according to selection in output field
-    OutputPath->setText(OutputFolder);
-    // changes outputpath="..." to new outputpath in exec field
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    qDebug() << str_commando.replace(QRegExp ("output_dir=\"([^\"]*)\""), "output_dir=\"" + OutputFolder + "\"");
-    command->setText(str_commando);
-
-    // Enable re_run
-    enable_rerunning();
-}
 
 // Event: Click Run
 void MVSSelectorPage::btnProcessClicked()
@@ -1584,11 +1399,8 @@ void MVSSelectorPage::btnProcessClicked()
     QString str_command;
     txtReport->clear();
     str_command = command->text();
-    process_command = new QProcess();
+
     process_command->start("/bin/bash", QStringList() << "-c" << QString(str_command));
-  
-    connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
-    connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
 }
 
 // Handle regular output
@@ -1647,15 +1459,11 @@ void MVSSelectorPage::wrongMessage()
 }
 
 // Event: Advanced Options clicked
-void MVSSelectorPage::btnAdvancedOptionsClicked()
+void MVSSelectorPage::btnAdvancedOptionsClicked(int checkstate)
 {
     QString get_SelItem = MVSSel->itemData(MVSSel->currentIndex()).toString();
 
-    QString str_commando = command->text();
-
-    qDebug() << str_commando.replace(QRegExp ("mvs=\"([^\"]*)\""), "mvs=\"" + get_SelItem + "\"");
-
-    if (AdvancedOptions->checkState() == Qt::Checked) {
+    if (checkstate) {
 	//Show all the Advanced Options
 	command->setEnabled(true);
 	TerminalMode->QWidget::show();
@@ -1695,9 +1503,9 @@ void MVSSelectorPage::btnAdvancedOptionsClicked()
 }
 
 // Event: Terminal Mode clicked
-void MVSSelectorPage::btnTerminalModeClicked()
+void MVSSelectorPage::btnTerminalModeClicked(int checkstate)
 {
-    if (TerminalMode->checkState() == Qt::Checked) {
+    if (checkstate) {
 	command->setEnabled(true);
 	command->QWidget::show();
     }
@@ -1763,12 +1571,11 @@ void MVSSelectorPage::fldcommandClicked()
 }
 
 // Event: Selector changed
-void MVSSelectorPage::on_MVSSel_changed()
+void MVSSelectorPage::on_MVSSel_changed(int selection_num)
 {
-    QString get_SelItem = MVSSel->itemData(MVSSel->currentIndex()).toString();
     QString str_commando;
 
-    if(get_SelItem == "1")
+    if(selection_num == 0)
     {
 	// Hide Matrix selector + show Images
 	if(AdvancedOptions->checkState() == Qt::Checked)
@@ -1781,7 +1588,7 @@ void MVSSelectorPage::on_MVSSel_changed()
 	UseRefine->QAbstractButton::setChecked(true);
 	PMVSoptionshide();
     }
-    else if(get_SelItem == "2")
+    else if(selection_num == 1)
     {
 	UseDensify->QWidget::hide();
 	UseRefine->QWidget::hide();
@@ -1790,7 +1597,7 @@ void MVSSelectorPage::on_MVSSel_changed()
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"pmvs\"");
 	PMVSoptionshide();
     }
-    else if(get_SelItem == "3")
+    else if(selection_num == 2)
     {
 	UseDensify->QWidget::hide();
 	UseRefine->QWidget::hide();
@@ -1801,7 +1608,7 @@ void MVSSelectorPage::on_MVSSel_changed()
 	PMVSoptionsdisplay();
 	}
     }
-    else if(get_SelItem == "4")
+    else if(selection_num == 3)
     {
 	UseDensify->QWidget::hide();
 	UseRefine->QWidget::hide();
@@ -1810,7 +1617,7 @@ void MVSSelectorPage::on_MVSSel_changed()
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"cmpmvs\"");
 	PMVSoptionshide();
     }
-    else if(get_SelItem == "5")
+    else if(selection_num == 4)
     {
 	UseDensify->QWidget::hide();
 	UseRefine->QWidget::hide();
@@ -1823,54 +1630,28 @@ void MVSSelectorPage::on_MVSSel_changed()
     get_standard_paths(str_commando);
 }
 
-// Event btnUseDensify Clicked
-void MVSSelectorPage::btnUseDensifyClicked()
+// Event openMVS Clicked
+void MVSSelectorPage::btnUseopenMVSoptionsClicked(int checkstate, QString option_decl)
 {
     QString str_commando;
     str_commando = command->text();
-    QString str(str_commando); 
-    if(UseDensify->checkState() == Qt::Checked)
+    if(checkstate)
     {
-    qDebug() << str_commando.replace(QRegExp ("use_densify=\"([^\"]*)\""), "use_densify=\"ON\"");
+    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"ON\"");
     }
     else
     {
-    qDebug() << str_commando.replace(QRegExp ("use_densify=\"([^\"]*)\""), "use_densify=\"OFF\"");
+    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"OFF\"");
     }
     command->setText(str_commando);
 }
 
-// Event btnUseRefine Clicked
-void MVSSelectorPage::btnUseRefineClicked()
-{
-    QString str_commando;
-    str_commando = command->text();
-    QString str(str_commando); 
-    if(UseRefine->checkState() == Qt::Checked)
-    {
-    qDebug() << str_commando.replace(QRegExp ("use_refine=\"([^\"]*)\""), "use_refine=\"ON\"");
-    }
-    else
-    {
-    qDebug() << str_commando.replace(QRegExp ("use_refine=\"([^\"]*)\""), "use_refine=\"OFF\"");
-    }
-    command->setText(str_commando);
-}
 
 // Event pmvsOptions clicked
-void MVSSelectorPage::pmvsOptionsclicked(QString option_decl)
+void MVSSelectorPage::pmvsOptionsclicked(QString new_content, QString option_decl)
 {
     QString str_commando;
     str_commando = command->text();
-    QString replace_string;
-    if (option_decl == "max_imagecount") { replace_string = ImageCount->text(); }
-    else if (option_decl == "cpu") { replace_string = numCPU->text(); }
-    else if (option_decl == "level") { replace_string = level->text(); }
-    else if (option_decl == "csize") { replace_string = csize->text(); }
-    else if (option_decl == "threshold") { replace_string = threshold->text(); }
-    else if (option_decl == "wsize") { replace_string = wsize->text(); }
-    else if (option_decl == "minImageNum") { replace_string = minImage->text(); }
-    
-    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + replace_string + "\"");
+    qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + new_content + "\"");
     command->setText(str_commando);
 }

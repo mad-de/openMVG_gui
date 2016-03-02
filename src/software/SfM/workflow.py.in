@@ -42,9 +42,9 @@ def erroroutput (output, last_str, last_exec):
 
 # Rename matches files
 def rename_matches(char_in, solver, folder):
- if solver == "1":
+ if solver == "0":
   char_out = "f"
- elif solver == "2":
+ elif solver == "1":
   char_out = "e"
  if char_in != char_out:
   filename_in = os.path.join(folder, "matches." + char_in + ".txt")
@@ -106,7 +106,7 @@ elif user_vars["step"] == "sfm_solver":
 
  # SEQUENTIAL: Reconstruction 
  if still_working:
-  if user_vars["solver"] == "1":
+  if user_vars["solver"] == "0":
    curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_IncrementalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", user_vars["outputpath"], "-a", user_vars["image1"], "-b", user_vars["image2"], "-c", user_vars["camera_model"] ]
    pRecons = subprocess.Popen(curr_string)
    pRecons.wait()
@@ -114,7 +114,7 @@ elif user_vars["step"] == "sfm_solver":
 
  # GLOBAL: Reconstruction
  if still_working:
-  if user_vars["solver"] == "2":
+  if user_vars["solver"] == "1":
    curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_GlobalSfM"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.json"), "-m", user_vars["matchespath"], "-o", user_vars["outputpath"] ]
    pRecons = subprocess.Popen(curr_string)
    pRecons.wait()
@@ -136,9 +136,9 @@ elif user_vars["step"] == "sfm_solver":
  
  if still_working:
   # Get previous data
-  if user_vars["solver"] == "1":
+  if user_vars["solver"] == "0":
    options_solver = "Incremental";
-  elif user_vars["solver"] == "2":
+  elif user_vars["solver"] == "1":
    options_solver = "Global";
 
   with open(os.path.join(user_vars["inputpath"], "Features_options.txt"), "r") as text_file_read:
@@ -179,7 +179,7 @@ elif user_vars["step"] == "pmvs":
    with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
     pipeline_output = text_file.readline()
    text_file.close()
-   options_display = "MVS: PMVS; Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; " + pipeline_output
+   options_display = pipeline_output + "MVS: PMVS; Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + ";\n"
    # Data output
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/pmvs_options.txt.ply end_path");
    print "options_used " + options_display + " end_options_used";
@@ -218,7 +218,7 @@ elif user_vars["step"] == "cmvs":
    with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
     pipeline_output = text_file.readline()
    text_file.close()
-   options_display = pipeline_output + "MVS: CMVS; maxImagecount: " + user_vars["max_imagecount"] + "; cpu: " + user_vars["cpu"] + "; level: " + user_vars["level"] + "; csize: " + user_vars["csize"] + "; threshold: " + user_vars["threshold"] + "; wsize: " + user_vars["wsize"]+ "; minImageNum: " +  user_vars["minImageNum"]
+   options_display = pipeline_output + "MVS: CMVS; maxImagecount: " + user_vars["max_imagecount"] + "; cpu: " + user_vars["cpu"] + "; level: " + user_vars["level"] + "; csize: " + user_vars["csize"] + "; threshold: " + user_vars["threshold"] + "; wsize: " + user_vars["wsize"]+ "; minImageNum: " +  user_vars["minImageNum"] + ";\n";
    # Data output
    print "preview_path " + os.path.join(user_vars["output_dir"], "PMVS/models/option-0000.ply end_path");
    print "options_used " + options_display + " end_options_used";
@@ -297,7 +297,7 @@ elif user_vars["step"] == "openMVS":
     with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
      pipeline_output = text_file.readline()
     text_file.close()
-    options_display = pipeline_output + "MVS: OpenMVS Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + "; "
+    options_display = pipeline_output + "MVS: OpenMVS Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + ";\n"
     # Data output
     print "preview_path " + os.path.join(user_vars["output_dir"],"scene_dense_mesh_texture.ply end_path");
     print "options_used " + options_display + " end_options_used";

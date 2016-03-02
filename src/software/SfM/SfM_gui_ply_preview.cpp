@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-    	viewer->addText (options, 5, 20, "options", 0);
+    	viewer->addText (options + "File: " + input_file, 5, 20, "options", 0);
     }
 
     // Main loop

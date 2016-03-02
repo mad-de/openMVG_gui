@@ -43,15 +43,13 @@ private slots:
     void check_demo_path();
     void rightMessage();
     void wrongMessage();
-    void btnInputPathClicked();
-    void btnOutputPathClicked();
-    void btnAdvancedOptionsClicked();
+    void btnAdvancedOptionsClicked(int checkstate);
+    void btnTerminalModeClicked(int checkstate);
     void btnProcessClicked();
-    void btnTerminalModeClicked();
     void fldcommandClicked();
-    void on_CameraSel_changed();
-    void on_DescrPres_changed();
-    void on_DescrMeth_changed();
+    void on_selectors_changed(QString selection_string, QString option_decl);
+    void enable_run_again();
+    void btnPathbuttonsClicked(QString mode);
 
 private:
     QTimer* demo_download_timer;
@@ -98,21 +96,15 @@ public:
 private slots:
     void rightMessage();
     void wrongMessage();
-    void btnInputPathClicked();
-    void btnOutputPathClicked();
-    void btnImagesFolderPathClicked();
     void btnProcessClicked();
-    void btnAdvancedOptionsClicked();
-    void btnTerminalModeClicked();
+    void btnAdvancedOptionsClicked(int checkstate);
+    void btnTerminalModeClicked(int checkstate);
     void fldcommandClicked();
-    void on_solverImage1Button_clicked();
-    void on_solverImage2Button_clicked();
-    void on_PipelineSel_changed();
-    void on_MatrixFilter_changed();
     void setRatio(int value);
-    void on_CameraSel_changed();
     void enable_rerunning();
     void enable_run_again();
+    void btnPathbuttonsClicked(QString mode);
+    void on_selectors_changed(int selection_num, QString option_decl);
 
 private:
     QLineEdit *StatusPipelinePage;
@@ -175,22 +167,20 @@ public:
     int nextId() const Q_DECL_OVERRIDE;
 
 private slots:
-    void get_standard_paths(QString str_commando);
+    void fldcommandClicked();
+    void btnProcessClicked();
     void rightMessage();
     void wrongMessage();
-    void btnInputPathClicked();
-    void btnOutputPathClicked();
-    void btnAdvancedOptionsClicked();
-    void btnProcessClicked();
-    void btnTerminalModeClicked();
-    void fldcommandClicked();
-    void on_MVSSel_changed();
-    void btnUseDensifyClicked();
-    void btnUseRefineClicked();
     void enable_rerunning();
     void PMVSoptionsdisplay();
     void PMVSoptionshide();
-    void pmvsOptionsclicked(QString option_decl);
+    void get_standard_paths(QString str_commando);
+    void btnPathbuttonsClicked(QString mode);
+    void btnTerminalModeClicked(int checkstate);
+    void btnAdvancedOptionsClicked(int selection_num);
+    void on_MVSSel_changed(int selection_num);
+    void btnUseopenMVSoptionsClicked(int checkstate, QString option_decl);
+    void pmvsOptionsclicked(QString new_content, QString option_decl);
 
 private:
     QLineEdit *StatusMVSSelectorPage;
@@ -231,7 +221,6 @@ private:
     QLineEdit *wsize;
     QLabel *minImageLabel;
     QLineEdit *minImage;
-    QSignalMapper *pmvsOptionsmapper;
 };
 
 #endif
