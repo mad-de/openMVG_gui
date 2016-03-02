@@ -1,6 +1,7 @@
 #include <QtWidgets>
 #include <QPushButton>
 #include <QTextEdit>
+#include <thread>
 
 #include "software/SfM/SfM_gui.h"
 
@@ -17,7 +18,7 @@ QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step
 
 QString initialcommandline_mvs_openMVS = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
 
-QString initialcommandline_mvs_CMVS = "python ../software/SfM/workflow.py step=\"cmvs\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" max_imagecount=\"100\" cpu=\"8\" level=\"1\" csize=\"2\" threshold=\"0.7\" wsize=\"7\" minImageNum=\"3\"";
+QString initialcommandline_mvs_CMVS = "python ../software/SfM/workflow.py step=\"cmvs\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" max_imagecount=\"100\" cpu=\"6\" level=\"1\" csize=\"2\" threshold=\"0.7\" wsize=\"7\" minImageNum=\"3\"";
 
 QString initialcommandline_mvs_stand = "python ../software/SfM/workflow.py step=\"curr\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\"";
 
@@ -35,6 +36,13 @@ int visited_comp_features = 0;
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
 
 // Global functions
+QString get_num_of_CPUs()
+{
+unsigned int sys_numCPUs = std::thread::hardware_concurrency();
+QString get_numCPUs = QString::number(sys_numCPUs);
+return get_numCPUs;
+}
+
 void launchPreview(QString preview_file, QString title, QString options)
 {
     QFile preview_path(preview_file);
@@ -1168,7 +1176,7 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     ImageCount->QWidget::hide();
     numCPULabel = new QLabel(tr("Number of CPUs to use (incl. virtual):"));
     numCPULabel->QWidget::hide();
-    numCPU = new QLineEdit("8");
+    numCPU = new QLineEdit(get_num_of_CPUs());
     numCPU->QWidget::setFixedWidth(100);
     numCPU->setAlignment(Qt::AlignHCenter);	
     numCPU->QWidget::hide();
@@ -1553,7 +1561,7 @@ void MVSSelectorPage::PMVSoptionshide()
     if (MVSSel->itemData(MVSSel->currentIndex()).toString() != "3")
     {
 	ImageCount->setText("100");
-	numCPU->setText("8");
+	numCPU->setText(get_num_of_CPUs());
 	level->setText("1");
 	csize->setText("2");
 	threshold->setText("0.7");
@@ -1603,6 +1611,8 @@ void MVSSelectorPage::on_MVSSel_changed(int selection_num)
 	UseRefine->QWidget::hide();
 
         str_commando = initialcommandline_mvs_CMVS;
+	qDebug() << str_commando.replace(QRegExp ("cpu=\"([^\"]*)\""), "cpu=\"" + get_num_of_CPUs() + "\"");
+
 	if(AdvancedOptions->checkState() == Qt::Checked)
 	{
 	PMVSoptionsdisplay();
