@@ -38,6 +38,7 @@ public:
     int nextId() const Q_DECL_OVERRIDE;
 
 private slots:
+    void cancelProcess();
     void finished_demo_download();
     void failed_demo_download();
     void check_demo_path();
@@ -65,6 +66,7 @@ private:
     QTextEdit *txtReport;
     QLineEdit *command;
     QPushButton *btnProcess;
+    QPushButton *btnCancel;
     QLabel *CommandLabel;
     QProcess *process_command;
     QGridLayout *main_grid;
@@ -94,6 +96,7 @@ public:
     int nextId() const Q_DECL_OVERRIDE;
 
 private slots:
+    void cancelProcess();
     void rightMessage();
     void wrongMessage();
     void btnProcessClicked();
@@ -119,6 +122,7 @@ private:
     QPushButton *btnImagesFolderPath;
     QLabel *ImagesFolderLabel;
     QPushButton *btnProcess;
+    QPushButton *btnCancel;
     QLabel *PipelineSelLabel;
     QComboBox *PipelineSel;
     QCheckBox *AdvancedOptions;
@@ -167,6 +171,7 @@ public:
     int nextId() const Q_DECL_OVERRIDE;
 
 private slots:
+    void cancelProcess();
     void fldcommandClicked();
     void btnProcessClicked();
     void rightMessage();
@@ -203,6 +208,7 @@ private:
     QGridLayout *input_fields;
     QGridLayout *terminal_fields;
     QPushButton *btnProcess;
+    QPushButton *btnCancel;
     QCheckBox *UseRefine;
     QCheckBox *UseDensify;
     QLineEdit *preview_mvs;
