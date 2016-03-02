@@ -60,7 +60,7 @@ def check_for_empty_input_folder(folder):
  else:
   return True;
 
-# check if there are at least c valid images in folder
+# check if there are at least x valid images in folder
 def check_for_valid_images(num, folder):
  found_images = 0;
  for file in os.listdir(folder):
