@@ -28,6 +28,7 @@ if "@OPENMVS_BIN_PATH@" == "not-set":
  OPENMVS_BIN = os.path.join(os.path.expanduser('~'), "openMVS_build/bin")
 else:
  OPENMVS_BIN = "@OPENMVS_BIN_PATH@"
+
 # Indicate the openMVG camera sensor width directory
 CAMERA_SENSOR_WIDTH_DIRECTORY = "@OPENMVG_SOFTWARE_SFM_SRC_DIR@" + "/../../openMVG/exif/sensor_width_database"
 camera_file_params = os.path.join(CAMERA_SENSOR_WIDTH_DIRECTORY, "sensor_width_camera_database.txt")

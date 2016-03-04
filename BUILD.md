@@ -31,13 +31,14 @@ git clone --recursive https://github.com/mad-de/openMVG_gui.git openMVG
 mkdir openMVG_build && cd openMVG_build
 cmake -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/ -DCMAKE_INSTALL_PREFIX=$main_path/openMVG_build/openMVG_install -DBUILD_SFM_GUI=ON -DOPENMVG_PMVS_PATH=$main_path/CMVS-PMVS_build
 make
+make install
 cd ..
 
 #OpenMVS
 git clone https://github.com/cdcseacave/openMVS.git openMVS
 mkdir openMVS_build
 cd openMVS_build
-cmake . ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_DIR="$main_path/vcglib" -DOpenCV_CAN_BREAK_BINARY_COMPATIBILITY=OFF -DBUILD_SHARED_LIBS=ON
+cmake . ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_DIR="$main_path/vcglib" -DOpenCV_CAN_BREAK_BINARY_COMPATIBILITY=OFF -DOpenMVG_DIR:STRING="$main_path/openMVG_build/openMVG_install/share/openMVG/cmake/"
 sudo make install
 ```
 # Usage example
