@@ -868,7 +868,8 @@ void PipelinePage::btnPathbuttonsClicked(QString mode)
     // Event: Select Images
     if ((mode == "image1") or (mode == "image2")) 
     { 
-	QString file = QFileDialog::getOpenFileName(this, tr("Choose an image to initialize matching"), field("Comp_Features_InputPath").toString(), selfilter_images);
+        search_dir = ImagesFolderPath->text();
+	QString file = QFileDialog::getOpenFileName(this, tr("Choose an image to initialize matching"), search_dir, selfilter_images);
         QFileInfo filepath(file); 
         path = filepath.fileName();
     }
