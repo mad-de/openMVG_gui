@@ -75,10 +75,14 @@ private:
     QGridLayout *terminal_fields;
     QLabel *CameraSelLabel;
     QComboBox *CameraSel;
+    QLabel *GroupCameraSelLabel;
+    QComboBox *GroupCameraSel;
     QLabel *DescrPresLabel;
     QComboBox *DescrPres;
     QLabel *DescrMethLabel;
     QComboBox *DescrMeth;
+    QLabel *UprightLabel;
+    QComboBox *Upright;
     QProcess *process_preview_init;
 };
 

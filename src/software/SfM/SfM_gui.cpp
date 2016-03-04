@@ -12,7 +12,7 @@ QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 QString outputpath = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images_out/matches/";
 
-QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=\"3\" descr_pres=\"NORMAL\" descr_meth=\"SIFT\" force=1";
+QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=\"3\" descr_pres=\"NORMAL\" descr_meth=\"SIFT\" group_cameramodel=\"1\" use_upright=\"0\" intrinsics=\"0\" force=1";
 
 QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\" outputpath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=\"3\" force=1";
 
@@ -77,7 +77,7 @@ OMVGguiWizard::OMVGguiWizard(QWidget *parent)
     setOption(QWizard::HaveCustomButton1, true);
     connect(this, SIGNAL(customButtonClicked(int)), this, SLOT(showPreview()));
     setPixmap(QWizard::LogoPixmap, QPixmap(":/images/logo.png"));
-    resize(QDesktopWidget().availableGeometry(this).size() * 0.7);
+    resize(QDesktopWidget().availableGeometry(this).size() * 0.8);
 
     connect(this, SIGNAL(helpRequested()), this, SLOT(showHelp()));
     setOption(QWizard::NoCancelButton, true);
@@ -177,6 +177,12 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     CameraSel->addItem("Pinhole radial 3 (default)", QVariant(3));
     CameraSel->QWidget::hide();
     CameraSelLabel->QWidget::hide();
+    GroupCameraSelLabel = new QLabel(tr("[SfMInit_ImageListing] Group Camera Model:"));
+    GroupCameraSel = new QComboBox;
+    GroupCameraSel->addItem("0 (each view has it’s own camera intrinsic parameters)", QVariant(1));
+    GroupCameraSel->addItem("1 (view can share some camera intrinsic parameters) [default]", QVariant(2));
+    GroupCameraSel->QWidget::hide();
+    GroupCameraSelLabel->QWidget::hide();
     DescrPresLabel = new QLabel(tr("[SfM_ComputeFeatures] Describer Preset:"));
     DescrPres = new QComboBox;
     DescrPres->addItem(tr("NORMAL"), QVariant(1));
@@ -191,6 +197,12 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     DescrMeth->addItem(tr("AKAZE_MLDB"), QVariant(3));
     DescrMeth->QWidget::hide();
     DescrMethLabel->QWidget::hide();
+    UprightLabel = new QLabel(tr("[SfM_ComputeFeatures] Use upright feature:"));
+    Upright = new QComboBox;
+    Upright->addItem(tr("0 (rotation invariance) [default]"), QVariant(1));
+    Upright->addItem(tr("1 (extract upright feature - orientation angle = 0°)"), QVariant(2));
+    Upright->QWidget::hide();
+    UprightLabel->QWidget::hide();
 
     // Set up main Layout
     main_grid = new QGridLayout;  
@@ -214,20 +226,26 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     advanced_options->addWidget(CameraSelLabel, 1, 0);
     advanced_options->addWidget(CameraSel, 1, 1);
     CameraSel->setCurrentIndex(2);
+    advanced_options->addWidget(GroupCameraSelLabel, 2, 0);
+    advanced_options->addWidget(GroupCameraSel, 2, 1);
+    GroupCameraSel->setCurrentIndex(1);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(DescrPresLabel, 2, 0);
-    advanced_options->addWidget(DescrPres, 2, 1);
+    advanced_options->addWidget(DescrPresLabel, 3, 0);
+    advanced_options->addWidget(DescrPres, 3, 1);
     DescrPres->setCurrentIndex(0);
-    advanced_options->addWidget(DescrMethLabel, 3, 0);
-    advanced_options->addWidget(DescrMeth, 3, 1);
-    DescrPres->setCurrentIndex(0);
-    advanced_options->addWidget(OutputLabel, 4, 0);
-    advanced_options->addWidget(OutputPath, 4, 1);
-    advanced_options->addWidget(btnOutputPath, 4, 2);
+    advanced_options->addWidget(DescrMethLabel, 4, 0);
+    advanced_options->addWidget(DescrMeth, 4, 1);
+    DescrMeth->setCurrentIndex(0);
+    advanced_options->addWidget(UprightLabel, 5, 0);
+    advanced_options->addWidget(Upright, 5, 1);
+    Upright->setCurrentIndex(0);
+    advanced_options->addWidget(OutputLabel, 6, 0);
+    advanced_options->addWidget(OutputPath, 6, 1);
+    advanced_options->addWidget(btnOutputPath, 6, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 5, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 7, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 6, 0, 1, 3);
+    advanced_options->addWidget(command, 8, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
     terminal_fields->addWidget(btnCancel, 0, 7);
     terminal_fields->addWidget(btnProcess, 0, 8);
@@ -251,8 +269,10 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     connect(btnOutputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("outputpath"); });
     connect(btnInputPath, &QPushButton::clicked, [this]() { btnPathbuttonsClicked("inputpath"); });
     connect(CameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "camera_model"); } );
+    connect(GroupCameraSel,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "group_cameramodel"); } );
     connect(DescrPres,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "descr_pres"); } );
     connect(DescrMeth,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "descr_meth"); } );
+    connect(Upright,static_cast<void (QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this](QString new_string) { on_selectors_changed(new_string, "use_upright"); } );
     // processes
     connect(process_command, SIGNAL(readyReadStandardOutput()),this, SLOT(rightMessage()) );
     connect(process_command, SIGNAL(readyReadStandardError()), this, SLOT(wrongMessage()) );
@@ -448,10 +468,14 @@ void Comp_FeaturesPage::btnAdvancedOptionsClicked(int checkstate)
 	TerminalMode->QWidget::show();
 	CameraSel->QWidget::show();
 	CameraSelLabel->QWidget::show();
+	GroupCameraSel->QWidget::show();
+	GroupCameraSelLabel->QWidget::show();
 	DescrPres->QWidget::show();
 	DescrPresLabel->QWidget::show();
 	DescrMeth->QWidget::show();
 	DescrMethLabel->QWidget::show();
+	Upright->QWidget::show();
+	UprightLabel->QWidget::show();
 	OutputPath->QWidget::show();
 	btnOutputPath->QWidget::show();
 	OutputLabel->QWidget::show();
@@ -465,10 +489,14 @@ void Comp_FeaturesPage::btnAdvancedOptionsClicked(int checkstate)
 	command->QWidget::hide();
 	CameraSel->QWidget::hide();
 	CameraSelLabel->QWidget::hide();
+	GroupCameraSel->QWidget::hide();
+	GroupCameraSelLabel->QWidget::hide();
 	DescrPres->QWidget::hide();
 	DescrPresLabel->QWidget::hide();
 	DescrMeth->QWidget::hide();
 	DescrMethLabel->QWidget::hide();
+	Upright->QWidget::hide();
+	UprightLabel->QWidget::hide();
 	OutputPath->QWidget::hide();
 	btnOutputPath->QWidget::hide();
 	OutputLabel->QWidget::hide();
@@ -531,10 +559,13 @@ void Comp_FeaturesPage::fldcommandClicked()
 // Event: Selector changed
 void Comp_FeaturesPage::on_selectors_changed(QString selection_string, QString option_decl)
 {
-    
+    // CameraSel
     if (selection_string == "Pinhole") { selection_string = "1"; }
-    if (selection_string == "Pinhole radial 1") { selection_string = "2"; }
-    if (selection_string == "Pinhole radial 3 (default)") { selection_string = "3"; }
+    else if (selection_string == "Pinhole radial 1") { selection_string = "2"; }
+    else if (selection_string == "Pinhole radial 3 (default)") { selection_string = "3"; }
+    // GroupCameraSel + upright
+    else if ((selection_string.contains("1")) and ((option_decl == "group_cameramodel") or (option_decl == "use_upright"))) { selection_string = "1"; }
+    else if ((selection_string.contains("0")) and ((option_decl == "group_cameramodel") or (option_decl == "use_upright"))) { selection_string = "0"; }
 
     QString str_commando = command->text();
     qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + selection_string + "\"");

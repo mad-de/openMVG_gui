@@ -89,14 +89,18 @@ if user_vars["step"] == "comp_features":
 
  # 1. Image listing - generate sfm_data.json
  if still_working: 
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", user_vars["inputpath"], "-o", user_vars["outputpath"], "-d", camera_file_params, "-c", user_vars["camera_model"] ]
+  if user_vars["intrinsics"] == "0":
+   add_extras = "";
+  else:
+   add_extras = "-k " + user_vars["intrinsics"];
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_SfMInit_ImageListing"),  "-i", user_vars["inputpath"], "-o", user_vars["outputpath"], "-d", camera_file_params, "-c", user_vars["camera_model"], "-g", user_vars["group_cameramodel"], add_extras ]
   pIntrisics = subprocess.Popen(curr_string)
   pIntrisics.wait()
   still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"], "sfm_data.json")), curr_string, "SfMInit_ImageListing")
  
  # 2. Compute features
  if still_working:
-  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", os.path.join(user_vars["outputpath"], "sfm_data.json"), "-o", user_vars["outputpath"], "-m", user_vars["descr_meth"], "-f" , user_vars["force"], "-p", user_vars["descr_pres"] ]
+  curr_string = [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", os.path.join(user_vars["outputpath"], "sfm_data.json"), "-o", user_vars["outputpath"], "-m", user_vars["descr_meth"], "-f" , user_vars["force"], "-p", user_vars["descr_pres"], "-u", user_vars["use_upright"] ]
   pFeatures = subprocess.Popen(curr_string)
   pFeatures.wait()
   still_working = erroroutput(os.path.exists(os.path.join(user_vars["outputpath"], "image_describer.json")), curr_string, "ComputeFeratures")
