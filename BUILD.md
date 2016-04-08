@@ -35,7 +35,7 @@ make install
 cd ..
 
 #OpenMVS
-git clone https://github.com/cdcseacave/openMVS.git openMVS
+git clone https://github.com/mad-de/openMVS.git openMVS
 mkdir openMVS_build
 cd openMVS_build
 cmake . ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_DIR="$main_path/vcglib" -DOpenCV_CAN_BREAK_BINARY_COMPATIBILITY=OFF -DOpenMVG_DIR:STRING="$main_path/openMVG_build/openMVG_install/share/openMVG/cmake/"
