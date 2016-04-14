@@ -18,18 +18,16 @@ namespace sfm {
 /// Return the matches loaded from a provided matches file
 struct Matches_Provider
 {
-  matching::PairWiseMatches _pairWise_matches;
+  matching::PairWiseMatches pairWise_matches_;
 
   // Load matches from the provided matches file
   virtual bool load(const SfM_Data & sfm_data, const std::string & matchesfile)
   {
     if (!stlplus::is_file(matchesfile))
     {
-      std::cerr << std::endl
-        << "Invalid matches file" << std::endl;
       return false;
     }
-    if (!matching::PairedIndMatchImport(matchesfile, _pairWise_matches)) {
+    if (!matching::Load(pairWise_matches_, matchesfile)) {
       std::cerr<< "Unable to read the matches file:" << matchesfile << std::endl;
       return false;
     }
@@ -37,8 +35,8 @@ struct Matches_Provider
     {
       const Views & views = sfm_data.GetViews();
       matching::PairWiseMatches matches_saved;
-      for (matching::PairWiseMatches::const_iterator iter = _pairWise_matches.begin();
-        iter != _pairWise_matches.end();
+      for (matching::PairWiseMatches::const_iterator iter = pairWise_matches_.begin();
+        iter != pairWise_matches_.end();
         ++iter)
       {
         if (views.find(iter->first.first) != views.end() &&
@@ -47,7 +45,7 @@ struct Matches_Provider
           matches_saved.insert(*iter);
         }
       }
-      _pairWise_matches.swap(matches_saved);
+      pairWise_matches_.swap(matches_saved);
     }
     return true;
   }
@@ -55,7 +53,7 @@ struct Matches_Provider
   /// Return the pairs used by the visibility graph defined by the pairwiser matches
   virtual Pair_Set getPairs() const
   {
-    return matching::getPairs(_pairWise_matches);
+    return matching::getPairs(pairWise_matches_);
   }
 }; // Features_Provider
 

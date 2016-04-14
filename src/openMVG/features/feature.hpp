@@ -20,37 +20,35 @@ namespace features {
 
 /**
  * Base class for Point features.
- * Store position of the feature point.
+ * Store position of a feature point.
  */
 class PointFeature {
+
+  friend std::ostream& operator<<(std::ostream& out, const PointFeature& obj);
+  friend std::istream& operator>>(std::istream& in, PointFeature& obj);
+
 public:
-  virtual inline ~PointFeature() {};
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  inline PointFeature(float x=0.0f, float y=0.0f)
-   : _coords(x, y) {}
+  PointFeature(float x=0.0f, float y=0.0f)
+   : coords_(x, y) {}
 
-  inline float x() const { return _coords(0); }
-  inline float y() const { return _coords(1); }
-  inline const Vec2f & coords() const { return _coords;}
+  float x() const { return coords_(0); }
+  float y() const { return coords_(1); }
+  const Vec2f & coords() const { return coords_;}
 
-  inline float& x() { return _coords(0); }
-  inline float& y() { return _coords(1); }
-  inline Vec2f& coords() { return _coords;}
-
-  virtual inline std::ostream& print(std::ostream& os) const
-  { return os << _coords(0) << " " << _coords(1); }
-
-  virtual inline std::istream& read(std::istream& in)
-  { return in >> _coords(0) >> _coords(1); }
+  float& x() { return coords_(0); }
+  float& y() { return coords_(1); }
+  Vec2f& coords() { return coords_;}
 
   template<class Archive>
   void serialize(Archive & ar)
   {
-    ar (_coords(0), _coords(1));
+    ar (coords_(0), coords_(1));
   }
 
 protected:
-  Vec2f _coords;  // (x, y).
+  Vec2f coords_;  // (x, y).
 };
 
 typedef std::vector<PointFeature> PointFeatures;
@@ -58,12 +56,12 @@ typedef std::vector<PointFeature> PointFeatures;
 //with overloaded operators:
 inline std::ostream& operator<<(std::ostream& out, const PointFeature& obj)
 {
-  return obj.print(out); //simply call the print method.
+  return out << obj.coords_(0) << " " << obj.coords_(1);
 }
 
 inline std::istream& operator>>(std::istream& in, PointFeature& obj)
 {
-  return obj.read(in); //simply call the read method.
+  return in >> obj.coords_(0) >> obj.coords_(1);
 }
 
 /**
@@ -71,23 +69,25 @@ inline std::istream& operator>>(std::istream& in, PointFeature& obj)
  * Add scale and orientation description to basis PointFeature.
  */
 class SIOPointFeature : public PointFeature {
-public:
-  virtual ~SIOPointFeature() {};
 
+  friend std::ostream& operator<<(std::ostream& out, const SIOPointFeature& obj);
+  friend std::istream& operator>>(std::istream& in, SIOPointFeature& obj);
+
+public:
   SIOPointFeature(float x=0.0f, float y=0.0f,
                   float scale=0.0f, float orient=0.0f)
     : PointFeature(x,y)
-    , _scale(scale)
-    , _orientation(orient) {}
+    , scale_(scale)
+    , orientation_(orient) {}
 
-  inline float scale() const { return _scale; }
-  inline float& scale() { return _scale; }
-  inline float orientation() const { return _orientation; }
-  inline float& orientation() { return _orientation; }
+  float scale() const { return scale_; }
+  float& scale() { return scale_; }
+  float orientation() const { return orientation_; }
+  float& orientation() { return orientation_; }
 
   bool operator ==(const SIOPointFeature& b) const {
-    return (_scale == b.scale()) &&
-           (_orientation == b.orientation()) &&
+    return (scale_ == b.scale()) &&
+           (orientation_ == b.orientation()) &&
            (x() == b.x()) && (y() == b.y()) ;
   };
 
@@ -95,29 +95,132 @@ public:
     return !((*this)==b);
   };
 
-  virtual std::ostream& print(std::ostream& os) const
+  template<class Archive>
+  void serialize(Archive & ar)
   {
-    return PointFeature::print(os) << " " << _scale << " " << _orientation;
+    ar (
+      coords_(0), coords_(1),
+      scale_,
+      orientation_);
   }
 
-  virtual std::istream& read(std::istream& in)
-  {
-    return PointFeature::read(in) >> _scale >> _orientation;
+protected:
+  float scale_;        // In pixels.
+  float orientation_;  // In radians.
+};
+
+//
+inline std::ostream& operator<<(std::ostream& out, const SIOPointFeature& obj)
+{
+  const PointFeature *pf = static_cast<const PointFeature*>(&obj);
+  return out << *pf << " " << obj.scale_ << " " << obj.orientation_;
+}
+
+inline std::istream& operator>>(std::istream& in, SIOPointFeature& obj)
+{
+  PointFeature *pf = static_cast<PointFeature*>(&obj);
+  return in >> *pf >> obj.scale_ >> obj.orientation_;
+}
+
+/// Return the coterminal angle between [0;2*PI].
+/// Angle value must be in Radian.
+inline float getCoterminalAngle(float angle)
+{
+  const float f2PI = 2.f*M_PI;
+  while (angle > f2PI) {
+    angle -= f2PI;
   }
+  while (angle < 0.0f) {
+    angle += f2PI;
+  }
+  return angle;
+}
+
+/**
+* Base class for Affine "Point" features.
+* Add major & minor ellipse axis & orientation to the basis PointFeature.
+*/
+class AffinePointFeature : public PointFeature {
+
+  friend std::ostream& operator<<(std::ostream& out, const AffinePointFeature& obj);
+  friend std::istream& operator>>(std::istream& in, AffinePointFeature& obj);
+
+public:
+  virtual ~AffinePointFeature() {};
+
+  AffinePointFeature(float x = 0.0f, float y = 0.0f,
+    float a = 0.0f, float b = 0.0f, float c = 0.0f)
+    : PointFeature(x, y)
+    , a_(a), b_(b), c_(c)
+  {
+    l1_ = (a + c - std::sqrt(a*a + c*c + 4 * b*b - 2 * a*c)) / 2;
+    l2_ = (a + c + std::sqrt(a*a + c*c + 4 * b*b - 2 * a*c)) / 2;
+    l1_ = 1.0 / std::sqrt(l1_);
+    l2_ = 1.0 / std::sqrt(l2_);
+
+    phi_ = 0.0;
+    if (b == 0)
+    {
+      if (a > c)
+        phi_ = M_PI / 2; // else 0
+    }
+    else
+    {
+      const double t = std::atan(2 * b / (a - c));
+      if (a < c)
+        phi_ = t / 2;
+      else
+        phi_ = t / 2 + ((b > 0) ? -M_PI / 2 : M_PI / 2);
+    }
+
+    if (l1_ > l2_)
+    {
+      std::swap(l1_, l2_);
+      phi_ = getCoterminalAngle(M_PI / 2 - phi_);
+    }
+  }
+
+  float l1() const { return l1_; }
+  float l2() const { return l2_; }
+  float orientation() const { return phi_; }
+
+  bool operator ==(const AffinePointFeature& b) const {
+    return ((x() == b.x()) && (y() == b.y() &&
+      (l1_ == b.l1_) && (l2_ == b.l2_) && (phi_ == b.phi_)));
+  };
+
+  bool operator !=(const AffinePointFeature& rhs) const {
+    return !((*this) == rhs);
+  };
 
   template<class Archive>
   void serialize(Archive & ar)
   {
     ar (
-      _coords(0), _coords(1),
-      _scale,
-      _orientation);
+      coords_(0), coords_(1),
+      l1_, l2_, phi_, a_, b_, c_);
   }
 
+  float a() const { return a_; }
+  float b() const { return b_; }
+  float c() const { return c_; }
+
 protected:
-  float _scale;        // In pixels.
-  float _orientation;  // In radians.
+  float l1_, l2_, phi_, a_, b_, c_;
 };
+
+inline std::ostream& operator<<(std::ostream& out, const AffinePointFeature& rhs)
+{
+  const PointFeature *pf = static_cast<const PointFeature*>(&rhs);
+  return out << *pf << " " << rhs.l1_ << " " << rhs.l2_ << " " << rhs.phi_
+    << " " << rhs.a_ << " " << rhs.b_ << " " << rhs.c_;
+}
+
+inline std::istream& operator>>(std::istream& in, AffinePointFeature& rhs)
+{
+  PointFeature *pf = static_cast<PointFeature*>(&rhs);
+  return in >> *pf >> rhs.l1_ >> rhs.l2_ >> rhs.phi_ >> rhs.a_ >> rhs.b_ >> rhs.c_;
+}
 
 /// Read feats from file
 template<typename FeaturesT >
@@ -126,14 +229,16 @@ static bool loadFeatsFromFile(
   FeaturesT & vec_feat)
 {
   vec_feat.clear();
-  bool bOk = false;
 
   std::ifstream fileIn(sfileNameFeats.c_str());
+  if (!fileIn.is_open())
+    return false;
+
   std::copy(
     std::istream_iterator<typename FeaturesT::value_type >(fileIn),
     std::istream_iterator<typename FeaturesT::value_type >(),
     std::back_inserter(vec_feat));
-  bOk = !fileIn.bad();
+  const bool bOk = !fileIn.bad();
   fileIn.close();
   return bOk;
 }
@@ -145,9 +250,11 @@ static bool saveFeatsToFile(
   FeaturesT & vec_feat)
 {
   std::ofstream file(sfileNameFeats.c_str());
+  if (!file.is_open())
+    return false;
   std::copy(vec_feat.begin(), vec_feat.end(),
             std::ostream_iterator<typename FeaturesT::value_type >(file,"\n"));
-  bool bOk = file.good();
+  const bool bOk = file.good();
   file.close();
   return bOk;
 }

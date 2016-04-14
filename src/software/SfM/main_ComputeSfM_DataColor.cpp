@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "openMVG/sfm/sfm.hpp"
+#include "openMVG/stl/stl.hpp"
 #include "software/SfM/SfMPlyHelper.hpp"
 
 #include "third_party/cmdLine/cmdLine.h"
@@ -176,6 +177,13 @@ int main(int argc, char **argv)
 
       std::cerr << s << std::endl;
       return EXIT_FAILURE;
+  }
+
+  if (sOutputPLY_Out.empty())
+  {
+    std::cerr << std::endl
+      << "No output PLY filename specified." << std::endl;
+    return EXIT_FAILURE;
   }
 
   // Load input SfM_Data scene

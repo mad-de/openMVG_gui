@@ -9,6 +9,7 @@
 
 #include "openMVG/sfm/pipelines/global/sfm_global_engine_relative_motions.hpp"
 #include "openMVG/system/timer.hpp"
+#include "openMVG/cameras/Cameras_Common_command_line_helper.hpp"
 
 using namespace openMVG;
 using namespace openMVG::sfm;
@@ -40,14 +41,14 @@ int main(int argc, char **argv)
   std::string sOutDir = "";
   int iRotationAveragingMethod = int (ROTATION_AVERAGING_L2);
   int iTranslationAveragingMethod = int (TRANSLATION_AVERAGING_SOFTL1);
-  bool bRefineIntrinsics = true;
+  std::string sIntrinsic_refinement_options = "ADJUST_ALL";
 
   cmd.add( make_option('i', sSfM_Data_Filename, "input_file") );
   cmd.add( make_option('m', sMatchesDir, "matchdir") );
   cmd.add( make_option('o', sOutDir, "outdir") );
   cmd.add( make_option('r', iRotationAveragingMethod, "rotationAveraging") );
   cmd.add( make_option('t', iTranslationAveragingMethod, "translationAveraging") );
-  cmd.add( make_option('f', bRefineIntrinsics, "refineIntrinsics") );
+  cmd.add( make_option('f', sIntrinsic_refinement_options, "refineIntrinsics") );
 
   try {
     if (argc == 1) throw std::string("Invalid parameter.");
@@ -59,15 +60,25 @@ int main(int argc, char **argv)
     << "[-o|--outdir] path where the output data will be stored\n"
     << "\n[Optional]\n"
     << "[-r|--rotationAveraging]\n"
-    << "\t 1 -> L1 minimization\n"
-    << "\t 2 -> L2 minimization (default)\n"
+      << "\t 1 -> L1 minimization\n"
+      << "\t 2 -> L2 minimization (default)\n"
     << "[-t|--translationAveraging]:\n"
-    << "\t 1 -> L1 minimization\n"
-    << "\t 2 -> L2 minimization of sum of squared Chordal distances\n"
-    << "\t 3 -> SoftL1 minimization (default)\n"
-    << "[-f|--refineIntrinsics]\n"
-    << "\t 0-> intrinsic parameters are kept as constant\n"
-    << "\t 1-> refine intrinsic parameters (default). \n"
+      << "\t 1 -> L1 minimization\n"
+      << "\t 2 -> L2 minimization of sum of squared Chordal distances\n"
+      << "\t 3 -> SoftL1 minimization (default)\n"
+    << "[-f|--refineIntrinsics] Intrinsic parameters refinement option\n"
+      << "\t ADJUST_ALL -> refine all existing parameters (default) \n"
+      << "\t NONE -> intrinsic parameters are held as constant\n"
+      << "\t ADJUST_FOCAL_LENGTH -> refine only the focal length\n"
+      << "\t ADJUST_PRINCIPAL_POINT -> refine only the principal point position\n"
+      << "\t ADJUST_DISTORTION -> refine only the distortion coefficient(s) (if any)\n"
+      << "\t -> NOTE: options can be combined thanks to '|'\n"
+      << "\t ADJUST_FOCAL_LENGTH|ADJUST_PRINCIPAL_POINT\n"
+      <<      "\t\t-> refine the focal length & the principal point position\n"
+      << "\t ADJUST_FOCAL_LENGTH|ADJUST_DISTORTION\n"
+      <<      "\t\t-> refine the focal length & the distortion coefficient(s) (if any)\n"
+      << "\t ADJUST_PRINCIPAL_POINT|ADJUST_DISTORTION\n"
+      <<      "\t\t-> refine the principal point position & the distortion coefficient(s) (if any)\n"
     << std::endl;
 
     std::cerr << s << std::endl;
@@ -79,6 +90,9 @@ int main(int argc, char **argv)
     std::cerr << "\n Rotation averaging method is invalid" << std::endl;
     return EXIT_FAILURE;
   }
+
+  const cameras::Intrinsic_Parameter_Type intrinsic_refinement_options =
+    cameras::StringTo_Intrinsic_Parameter_Type(sIntrinsic_refinement_options);
 
   if (iTranslationAveragingMethod < TRANSLATION_AVERAGING_L1 ||
       iTranslationAveragingMethod > TRANSLATION_AVERAGING_SOFTL1 )  {
@@ -114,7 +128,12 @@ int main(int argc, char **argv)
   }
   // Matches reading
   std::shared_ptr<Matches_Provider> matches_provider = std::make_shared<Matches_Provider>();
-  if (!matches_provider->load(sfm_data, stlplus::create_filespec(sMatchesDir, "matches.e.txt"))) {
+  if // Try to read the two matches file formats
+  (
+    !(matches_provider->load(sfm_data, stlplus::create_filespec(sMatchesDir, "matches.e.txt")) ||
+      matches_provider->load(sfm_data, stlplus::create_filespec(sMatchesDir, "matches.e.bin")))
+  )
+  {
     std::cerr << std::endl
       << "Invalid matches file." << std::endl;
     return EXIT_FAILURE;
@@ -126,7 +145,12 @@ int main(int argc, char **argv)
   }
 
   if (!stlplus::folder_exists(sOutDir))
-    stlplus::folder_create(sOutDir);
+  {
+    if (!stlplus::folder_create(sOutDir))
+    {
+      std::cerr << "\nCannot create the output directory" << std::endl;
+    }
+  }
 
   //---------------------------------------
   // Global SfM reconstruction process
@@ -143,7 +167,7 @@ int main(int argc, char **argv)
   sfmEngine.SetMatchesProvider(matches_provider.get());
 
   // Configure reconstruction parameters
-  sfmEngine.Set_bFixedIntrinsics(!bRefineIntrinsics);
+  sfmEngine.Set_Intrinsics_Refinement_Type(intrinsic_refinement_options);
 
   // Configure motion averaging method
   sfmEngine.SetRotationAveragingMethod(
@@ -162,7 +186,7 @@ int main(int argc, char **argv)
     //-- Export to disk computed scene (data & visualizable results)
     std::cout << "...Export SfM_Data to disk." << std::endl;
     Save(sfmEngine.Get_SfM_Data(),
-      stlplus::create_filespec(sOutDir, "sfm_data", ".json"),
+      stlplus::create_filespec(sOutDir, "sfm_data", ".bin"),
       ESfM_Data(ALL));
 
     Save(sfmEngine.Get_SfM_Data(),

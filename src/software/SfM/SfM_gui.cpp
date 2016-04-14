@@ -1078,6 +1078,7 @@ void PipelinePage::fldcommandClicked()
 void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 {
     QString str_commando = command->text();
+    QString Folder = OutputPath->text();
     QString replace_char;
 
     // Event: Pipeline Selector changed
@@ -1109,6 +1110,8 @@ void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 	    // Change matrix selector according to Pipeline (Incremental: g, Global: e)
 	    MatrixSel->setCurrentIndex(2);
 	    qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"e\"");
+	    // change Folder
+	    qDebug() << Folder.replace("reconstruction_incremental", "reconstruction_global");
 	}
 
 	// Dirty: show non-affected options for Incremental SfM
@@ -1135,6 +1138,8 @@ void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 	    // Change matrix selector according to Pipeline (Incremental: g, Global: e)
             MatrixSel->setCurrentIndex(1);
 	    qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"f\"");
+	    // change Folder
+	    qDebug() << Folder.replace("reconstruction_global", "reconstruction_incremental");
 	}
     }
     // Event: Pipeline Selector changed
@@ -1149,6 +1154,8 @@ void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 
     // general replace
     qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + replace_char + "\"");
+    qDebug() << str_commando.replace(QRegExp ("outputpath=\"([^\"]*)\""), "outputpath=\"" + Folder + "\"");
+    OutputPath->setText(Folder);
     command->setText(str_commando);
 
     enable_run_again();

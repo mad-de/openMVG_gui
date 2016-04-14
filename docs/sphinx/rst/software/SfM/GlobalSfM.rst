@@ -61,28 +61,36 @@ Arguments description:
 
   - **[-r|--rotationAveraging]**
 
-    - 2: (default) L2 rotation averaging _[Martinec]
     - 1: L1 rotation averaging _[Chatterjee]
+    - 2: (default) L2 rotation averaging _[Martinec]
 
   - **[-t|--translationAveraging]**
 
     - 1: (default) L1 translation averaging _[GlobalACSfM]
     - 2: L2 translation averaging _[Kyle2014]
-
-  - **[-c|--camera_model]**
-
-    - The camera model type that will be used for views with unknown intrinsic:
-
-      - 1: Pinhole
-      - 2: Pinhole radial 1
-      - 3: Pinhole radial 3 (default)
+    - 3: (default) SoftL1 minimization _[GlobalACSfM]
 
   - **[-f|--refineIntrinsics]**
+      User can control exactly which parameter will be considered as constant/variable and combine them by using the '|' operator.
+      
+    - ADJUST_ALL -> refine all existing parameters (default)
+    - NONE -> intrinsic parameters are held as constant
+    - ADJUST_FOCAL_LENGTH -> refine only the focal length
+    - ADJUST_PRINCIPAL_POINT -> refine only the principal point position
+    - ADJUST_DISTORTION -> refine only the distortion coefficient(s) (if any)
+    
+    - NOTE Options can be combined thanks to '|':
 
-    - 0: intrinsic parameters are kept as constant
-    - 1: refine intrinsic parameters (default)
+      - ADJUST_FOCAL_LENGTH|ADJUST_PRINCIPAL_POINT
+        -> refine the focal length & the principal point position
+      
+      - ADJUST_FOCAL_LENGTH|ADJUST_DISTORTION
+        -> refine the focal length & the distortion coefficient(s) (if any)
+      
+      - ADJUST_PRINCIPAL_POINT|ADJUST_DISTORTION
+        -> refine the principal point position & the distortion coefficient(s) (if any)
 
-*_[GlobalACSfM]* default settings are "-r 2 -t 1".
+*_[GlobalACSfM]* default settings are "-r 2 -t 3".
 
 
 **Tips**

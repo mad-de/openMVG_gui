@@ -1,3 +1,4 @@
+
 ###
 # Intrinsic image analysis and SfM_Data container initialization
 ###
@@ -191,6 +192,7 @@ INSTALL(TARGETS openMVG_main_ExportUndistortedImages DESTINATION bin/)
 ###
 # SfM export to X
 # - PMVS + bundler data format
+# - OpenMVS
 # - CMPMVS
 # - Meshlab
 # - MVE (File format v2)
@@ -200,6 +202,17 @@ INSTALL(TARGETS openMVG_main_ExportUndistortedImages DESTINATION bin/)
 #
 ADD_EXECUTABLE(openMVG_main_openMVG2PMVS main_openMVG2PMVS.cpp)
 TARGET_LINK_LIBRARIES(openMVG_main_openMVG2PMVS
+  openMVG_system
+  openMVG_image
+  openMVG_features
+  openMVG_sfm
+  stlplus
+  )
+
+# - Export a SfM openMVG scene to openMVS format
+#
+ADD_EXECUTABLE(openMVG_main_openMVG2openMVS main_openMVG2openMVS.cpp)
+TARGET_LINK_LIBRARIES(openMVG_main_openMVG2openMVS
   openMVG_system
   openMVG_image
   openMVG_features
@@ -265,6 +278,8 @@ TARGET_LINK_LIBRARIES(openMVG_main_ExportCameraFrustums
 # installation rules
 SET_PROPERTY(TARGET openMVG_main_openMVG2PMVS PROPERTY FOLDER OpenMVG/software)
 INSTALL(TARGETS openMVG_main_openMVG2PMVS DESTINATION bin/)
+SET_PROPERTY(TARGET openMVG_main_openMVG2openMVS PROPERTY FOLDER OpenMVG/software)
+INSTALL(TARGETS openMVG_main_openMVG2openMVS DESTINATION bin/)
 SET_PROPERTY(TARGET openMVG_main_openMVG2CMPMVS PROPERTY FOLDER OpenMVG/software)
 INSTALL(TARGETS openMVG_main_openMVG2CMPMVS DESTINATION bin/)
 SET_PROPERTY(TARGET openMVG_main_openMVG2MESHLAB PROPERTY FOLDER OpenMVG/software)
@@ -311,6 +326,10 @@ TARGET_LINK_LIBRARIES(openMVG_main_evalQuality
   stlplus
   )
 
+#installation rules
+SET_PROPERTY(TARGET openMVG_main_evalQuality PROPERTY FOLDER OpenMVG/software)
+INSTALL(TARGETS openMVG_main_evalQuality DESTINATION bin/)
+
 ###
 # openMVG Sfm gui
 ###
@@ -333,19 +352,15 @@ TARGET_LINK_LIBRARIES(openMVG_SfM_gui_ply_preview ${PCL_LIBRARIES})
 TARGET_LINK_LIBRARIES(openMVG_SfM_gui Qt5::Widgets)
 
 set(CMAKE_AUTOMOC OFF)
-#installation rules
 SET_PROPERTY(TARGET openMVG_SfM_gui PROPERTY FOLDER OpenMVG/software)
 INSTALL(TARGETS openMVG_SfM_gui DESTINATION bin/)
-SET_PROPERTY(TARGET openMVG_main_evalQuality PROPERTY FOLDER OpenMVG/software)
-INSTALL(TARGETS openMVG_main_evalQuality DESTINATION bin/)
-ENDIF(BUILD_SFM_GUI)
-##
-# Catch a string from CMAKE
-#
 
+# SFM specific: Catch PMVS path from CMAKE
 SET(OPENMVG_PMVS_PATH "/usr/lib/PMVS/" CACHE STRING "Path to your PMVS binary folder")
 SET(OPENMVG_PMVS_BIN_PATH "${OPENMVG_PMVS_PATH}/main")
 SET(OPENMVS_BIN_PATH "not-set" CACHE STRING "Path to your openMVS binary folder. not-set will use /home/user/OpenMVS_build/bin/")
+
+ENDIF(BUILD_SFM_GUI)
 
 ##
 # Export tutorial & SfM workflow file with valid paths thanks to a configuration file
@@ -357,6 +372,7 @@ IF(MSVC OR APPLE)
 ELSE()
   SET(OPENMVG_SOFTWARE_SFM_BUILD_DIR ${EXECUTABLE_OUTPUT_PATH})
 ENDIF()
+
 
 SET(OPENMVG_WORKFLOW_IN_FILE "${CMAKE_CURRENT_LIST_DIR}/workflow.py.in")
 CONFIGURE_FILE(${OPENMVG_WORKFLOW_IN_FILE}

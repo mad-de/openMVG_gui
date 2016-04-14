@@ -14,8 +14,7 @@ svn checkout svn://svn.code.sf.net/p/vcg/code/trunk/vcglib vcglib
 
 #Ceres (Required)
 git clone https://ceres-solver.googlesource.com/ceres-solver ceres-solver
-mkdir ceres_build
-cd ceres_build/
+mkdir ceres_build && cd ceres_build/
 cmake . ../ceres-solver/ -DMINIGLOG=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF
 make
 sudo make install
@@ -33,16 +32,14 @@ cd ..
 git clone --recursive https://github.com/mad-de/openMVG_gui.git openMVG
 mkdir openMVG_build && cd openMVG_build
 cmake -DCMAKE_BUILD_TYPE=RELEASE . ../openMVG/src/ -DCMAKE_INSTALL_PREFIX=$main_path/openMVG_build/openMVG_install -DBUILD_SFM_GUI=ON -DOPENMVG_PMVS_PATH=$main_path/CMVS-PMVS_build
-make
-make install
+make && make install
 cd ..
 
-#OpenMVS
-git clone https://github.com/mad-de/openMVS.git openMVS
-mkdir openMVS_build
-cd openMVS_build
-cmake . ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_DIR="$main_path/vcglib" -DOpenCV_CAN_BREAK_BINARY_COMPATIBILITY=OFF -DOpenMVG_DIR:STRING="$main_path/openMVG_build/openMVG_install/share/openMVG/cmake/"
-sudo make install
+#OpenMVS (Optional)
+git clone https://github.com/cdcseacave/openMVS.git openMVS
+mkdir openMVS_build && cd openMVS_build
+cmake . ../openMVS -DCMAKE_BUILD_TYPE=Release -DVCG_DIR="$main_path/vcglib" -DBUILD_SHARED_LIBS=ON
+make && sudo make install
 ```
 # Usage example
 ```
