@@ -138,12 +138,16 @@ bool SequentialSfMReconstructionEngine::Process() {
       {
         BundleAdjustment();
       }
-      while (badTrackRejector(4.0, 50) != 0);
+      while (badTrackRejector(4.0, 50));
+      eraseUnstablePosesAndObservations(sfm_data_);
     }
     ++resectionGroupIndex;
   }
   // Ensure there is no remaining outliers
-  badTrackRejector(4.0, 0);
+  if (badTrackRejector(4.0, 0))
+  {
+    eraseUnstablePosesAndObservations(sfm_data_);
+  }
 
   //-- Reconstruction done.
   //-- Display some statistics
@@ -333,7 +337,7 @@ bool SequentialSfMReconstructionEngine::InitLandmarkTracks()
 bool SequentialSfMReconstructionEngine::AutomaticInitialPairChoice(Pair & initial_pair) const
 {
   // From the k view pairs with the highest number of verified matches
-  // select a pair that have the largest basline (mean angle between it's bearing vectors).
+  // select a pair that have the largest baseline (mean angle between it's bearing vectors).
 
   const unsigned k = 20;
   const unsigned iMin_inliers_count = 100;
@@ -615,9 +619,8 @@ bool SequentialSfMReconstructionEngine::MakeInitialPair3D(const Pair & current_p
       const IndexT trackId = iter->first;
       const Landmark & landmark = iter->second;
       const Observations & obs = landmark.obs;
-      Observations::const_iterator iterObs_xI = obs.begin();
-      Observations::const_iterator iterObs_xJ = obs.begin();
-      std::advance(iterObs_xJ, 1);
+      Observations::const_iterator iterObs_xI = obs.find(view_I->id_view);
+      Observations::const_iterator iterObs_xJ = obs.find(view_J->id_view);
 
       const Observation & ob_xI = iterObs_xI->second;
       const IndexT & viewId_xI = iterObs_xI->first;
@@ -1237,7 +1240,7 @@ bool SequentialSfMReconstructionEngine::BundleAdjustment()
  *
  * @return True if more than 'count' outliers have been removed.
  */
-size_t SequentialSfMReconstructionEngine::badTrackRejector(double dPrecision, size_t count)
+bool SequentialSfMReconstructionEngine::badTrackRejector(double dPrecision, size_t count)
 {
   const size_t nbOutliers_residualErr = RemoveOutliers_PixelResidualError(sfm_data_, dPrecision, 2);
   const size_t nbOutliers_angleErr = RemoveOutliers_AngleError(sfm_data_, 2.0);

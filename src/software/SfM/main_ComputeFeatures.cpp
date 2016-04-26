@@ -22,6 +22,10 @@
 #include <cstdlib>
 #include <fstream>
 
+#ifdef OPENMVG_USE_OPENMP
+#include <omp.h>
+#endif
+
 using namespace openMVG;
 using namespace openMVG::image;
 using namespace openMVG::features;
@@ -56,6 +60,9 @@ int main(int argc, char **argv)
   std::string sImage_Describer_Method = "SIFT";
   bool bForce = false;
   std::string sFeaturePreset = "";
+#ifdef OPENMVG_USE_OPENMP
+  int iNumThreads = 0;
+#endif
 
   // required
   cmd.add( make_option('i', sSfM_Data_Filename, "input_file") );
@@ -65,6 +72,10 @@ int main(int argc, char **argv)
   cmd.add( make_option('u', bUpRight, "upright") );
   cmd.add( make_option('f', bForce, "force") );
   cmd.add( make_option('p', sFeaturePreset, "describerPreset") );
+
+#ifdef OPENMVG_USE_OPENMP
+  cmd.add( make_option('n', iNumThreads, "numThreads") );
+#endif
 
   try {
       if (argc == 1) throw std::string("Invalid command line parameter.");
@@ -86,6 +97,9 @@ int main(int argc, char **argv)
       << "   NORMAL (default),\n"
       << "   HIGH,\n"
       << "   ULTRA: !!Can take long time!!\n"
+#ifdef OPENMVG_USE_OPENMP
+      << "[-n|--numThreads] number of parallel computations\n"
+#endif
       << std::endl;
 
       std::cerr << s << std::endl;
@@ -99,7 +113,11 @@ int main(int argc, char **argv)
             << "--describerMethod " << sImage_Describer_Method << std::endl
             << "--upright " << bUpRight << std::endl
             << "--describerPreset " << (sFeaturePreset.empty() ? "NORMAL" : sFeaturePreset) << std::endl
-            << "--force " << bForce << std::endl;
+            << "--force " << bForce << std::endl
+#ifdef OPENMVG_USE_OPENMP
+            << "--numThreads " << iNumThreads << std::endl
+#endif
+            << std::endl;
 
 
   if (sOutDir.empty())  {
@@ -206,24 +224,39 @@ int main(int argc, char **argv)
 
   // Feature extraction routines
   // For each View of the SfM_Data container:
-  // - if regions file exist continue,
+  // - if regions file exists continue,
   // - if no file, compute features
   {
     system::Timer timer;
-    Image<unsigned char> imageGray;
+    Image<unsigned char> imageGray, globalMask, imageMask;
+
+    const std::string sGlobalMask_filename = stlplus::create_filespec(sOutDir, "mask.png");
+    if(stlplus::file_exists(sGlobalMask_filename))
+      ReadImage(sGlobalMask_filename.c_str(), &globalMask);
+
     C_Progress_display my_progress_bar( sfm_data.GetViews().size(),
       std::cout, "\n- EXTRACT FEATURES -\n" );
-    for(Views::const_iterator iterViews = sfm_data.views.begin();
-        iterViews != sfm_data.views.end();
-        ++iterViews, ++my_progress_bar)
+
+    #ifdef OPENMVG_USE_OPENMP
+    const unsigned int nb_max_thread = omp_get_max_threads();
+    #endif
+
+#ifdef OPENMVG_USE_OPENMP
+    omp_set_num_threads(iNumThreads);
+    #pragma omp parallel for schedule(dynamic) if(iNumThreads > 0) private(imageMask)
+#endif
+    for(int i = 0; i < sfm_data.views.size(); ++i)
     {
+#ifdef OPENMVG_USE_OPENMP
+      if(iNumThreads == 0) omp_set_num_threads(nb_max_thread);
+#endif
+      Views::const_iterator iterViews = sfm_data.views.begin();
+      std::advance(iterViews, i);
       const View * view = iterViews->second.get();
-      const std::string sView_filename = stlplus::create_filespec(sfm_data.s_root_path,
-        view->s_Img_path);
-      const std::string sFeat = stlplus::create_filespec(sOutDir,
-        stlplus::basename_part(sView_filename), "feat");
-      const std::string sDesc = stlplus::create_filespec(sOutDir,
-        stlplus::basename_part(sView_filename), "desc");
+      const std::string
+        sView_filename = stlplus::create_filespec(sfm_data.s_root_path, view->s_Img_path),
+        sFeat = stlplus::create_filespec(sOutDir, stlplus::basename_part(sView_filename), "feat"),
+        sDesc = stlplus::create_filespec(sOutDir, stlplus::basename_part(sView_filename), "desc");
 
       //If features or descriptors file are missing, compute them
       if (bForce || !stlplus::file_exists(sFeat) || !stlplus::file_exists(sDesc))
@@ -231,10 +264,34 @@ int main(int argc, char **argv)
         if (!ReadImage(sView_filename.c_str(), &imageGray))
           continue;
 
-        // Compute features and descriptors and export them to files
-        std::unique_ptr<Regions> regions;
-        image_describer->Describe(imageGray, regions);
-        image_describer->Save(regions.get(), sFeat, sDesc);
+        Image<unsigned char> * mask = nullptr; // The mask is null by default
+
+        const std::string sImageMask_filename =
+          stlplus::create_filespec(sfm_data.s_root_path,
+            stlplus::basename_part(sView_filename) + "_mask", "png");
+
+        if(stlplus::file_exists(sImageMask_filename))
+          ReadImage(sImageMask_filename.c_str(), &imageMask);
+
+        // The mask point to the globalMask, if a valid one exists for the current image
+        if(globalMask.Width() == imageGray.Width() && globalMask.Height() == imageGray.Height())
+          mask = &globalMask;
+        // The mask point to the imageMask (individual mask) if a valid one exists for the current image
+        if(imageMask.Width() == imageGray.Width() && imageMask.Height() == imageGray.Height())
+          mask = &imageMask;
+
+        Image<unsigned char> imageGray;
+        if (ReadImage(sView_filename.c_str(), &imageGray))
+        {
+          // Compute features and descriptors and export them to files
+          std::unique_ptr<Regions> regions;
+          image_describer->Describe(imageGray, regions, mask);
+          image_describer->Save(regions.get(), sFeat, sDesc);
+        }
+#ifdef OPENMVG_USE_OPENMP
+        #pragma omp critical
+#endif
+        ++my_progress_bar;
       }
     }
     std::cout << "Task done in (s): " << timer.elapsed() << std::endl;

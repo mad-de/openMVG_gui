@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include <pcl/io/vtk_lib_io.h>
 #include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <pcl/common/common_headers.h>
@@ -41,31 +40,16 @@ int main(int argc, char *argv[])
 	}
     }
 
-    // Load files
-    pcl::PolygonMesh mesh;
+    // Load point cloud
     pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
-    if (input_file.find("mesh_texture") != string::npos)
-    {
-	pcl::io::loadPolygonFilePLY (input_file, mesh);
-    }
-    else
-    {
-	pcl::io::loadPLYFile(input_file, *cloud);
-    }
+    pcl::io::loadPLYFile(input_file, *cloud);
 
     // Display point cloud
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer (title));
     viewer->setBackgroundColor (0, 0, 0);
-    if (input_file.find("mesh_texture") != string::npos)
-    {
-    	viewer->addPolygonMesh(mesh, "polygon", 0);
-    }
-    else
-    {
-	pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> rgb(cloud);
-	viewer->addPointCloud<pcl::PointXYZRGBA> (cloud, rgb, "ply cloud");
-	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ply cloud");
-    }
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBA> rgb(cloud);
+    viewer->addPointCloud<pcl::PointXYZRGBA> (cloud, rgb, "ply cloud");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "ply cloud");
 
     // Set manual camera position for demo files
     if (input_file.find("ImageDataset_SceauxCastle") != string::npos)
@@ -96,3 +80,4 @@ int main(int argc, char *argv[])
 	boost::this_thread::sleep (boost::posix_time::microseconds (100000));
     }
 }
+

@@ -5,6 +5,19 @@
 
 #include "software/SfM/SfM_gui.h"
 
+// General settings
+int desc_pres_standard = 1;
+QString str_desc_pres_standard = "HIGH";
+int PipelineSel_standard = 0;
+int matrix_filter_standard = 1;
+QString str_matrix_filter_standard = "f";
+
+// openMVS Settings
+QString init_RT_use_cglowdensity = "true";
+QString init_RE_scales = "3";
+QString init_RE_resolutionlevel = "0";
+QString init_TE_resolutionlevel = "0";
+
 // Initialize paths string and filters for later use
 QString selfilter_images = "JPEG (*.jpg *.jpeg);;TIFF (*.tif)";
 
@@ -12,11 +25,15 @@ QString parent_path_cut = QDir::currentPath().mid(0,  QDir::currentPath().length
 QString work_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/";
 QString outputpath = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images_out/matches/";
 
-QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=\"3\" descr_pres=\"NORMAL\" descr_meth=\"SIFT\" group_cameramodel=\"1\" use_upright=\"0\" intrinsics=\"0\" force=1";
+QString initialcommandline_comp_features = "python ../software/SfM/workflow.py step=\"comp_features\" inputpath=\"" + work_dir + "\" outputpath=\"" + outputpath + "\" camera_model=\"3\" descr_pres=\"" + str_desc_pres_standard + "\" descr_meth=\"SIFT\" group_cameramodel=\"1\" use_upright=\"0\" intrinsics=\"0\" force=1";
 
-QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\" outputpath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"1\" ratio=\"0.8\" matrix_filter=\"e\" camera_model=\"3\" force=1";
+QString initialcommandline_sfm_solver = "python ../software/SfM/workflow.py step=\"sfm_solver\" inputpath=\"" + work_dir + "\" imagespath=\"" + work_dir + "\" matchespath=\"" + work_dir + "\" outputpath=\"" + work_dir + "\"  image1=\"\" image2=\"\" solver=\"" + QString::number(PipelineSel_standard) + "\" ratio=\"0.8\" matrix_filter=\"" + str_matrix_filter_standard + "\" camera_model=\"3\" force=1";
 
-QString initialcommandline_mvs_openMVS = "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\"";
+QString initialize_commandline_mvs_openMVS()
+{
+    return "python ../software/SfM/workflow.py step=\"openMVS\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" use_densify=\"ON\" use_refine=\"ON\" RT_use_cglowdensity=\"" + init_RT_use_cglowdensity + "\" RE_scales=\"" + init_RE_scales + "\" RE_resolutionlevel=\"" + init_RE_resolutionlevel + "\"  TE_resolutionlevel=\"" + init_TE_resolutionlevel + "\"";
+}
+QString initialcommandline_mvs_openMVS = initialize_commandline_mvs_openMVS();
 
 QString initialcommandline_mvs_CMVS = "python ../software/SfM/workflow.py step=\"cmvs\" inputpath=\"" + work_dir + "\" output_dir=\"" + work_dir + "\" max_imagecount=\"100\" cpu=\"6\" level=\"1\" csize=\"2\" threshold=\"0.7\" wsize=\"7\" minImageNum=\"3\"";
 
@@ -29,8 +46,10 @@ QDir imageset_dir = parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "
 QFile Ktxt(parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/K.txt");
 QFile Readmetxt (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/images/Readme.txt");
 QString demo_path (parent_path_cut.mid(0, parent_path_cut.lastIndexOf("/")) + "/software/SfM/ImageDataset_SceauxCastle/");
-// Ugly: use int not to call download over and over again
+
+// Ugly: use integers for some events
 int visited_comp_features = 0;
+int openMVS_dialog_switcher;
 
 // Initialize stylesheet fix for diasppearing terminal-scrollbar
 QString TerminalLikeScrollbar = "QScrollBar:vertical {border: 0px solid black; background-color: #f07b4c; margin: 0px 0px 0px 0px; max-width: 5px;} QScrollBar::handle:vertical {min-height: 0px; background-color: #f07b4c; border: 0px solid black;} QScrollBar::add-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: bottom; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::sub-line:vertical {border: 0px solid black; height: 0px; subcontrol-position: top; subcontrol-origin: margin; background-color: #ffffff;} QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {border: 0px solid black; width: 0px; height: 0px;} QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {border: 0px solid black;background-color: #300a24;}";
@@ -49,12 +68,33 @@ void launchPreview(QString preview_file, QString title, QString options)
 {
     QFile preview_path(preview_file);
     QString preview_title = "Previewing file: " + QFileInfo(preview_path).fileName() + title;
+    QString preview_command;
 
     QProcess *procPreview = new QProcess();
     QStringList arguments;
     arguments << "-i" <<preview_file << "-t" << preview_title << "-o" << options;
-    QString preview_command = "./openMVG_SfM_gui_ply_preview";
+    if (QFileInfo(preview_path).completeSuffix() == "obj")
+    {
+	preview_command = "./openMVG_SfM_gui_obj_preview";
+    }
+    else
+    {
+	preview_command = "./openMVG_SfM_gui_ply_preview";
+    }
     procPreview->start(preview_command, arguments);
+}
+
+QString str_RT_use_cglowdensity = init_RT_use_cglowdensity;
+QString str_RE_scales = init_RE_scales;
+QString str_RE_resolutionlevel = init_RE_resolutionlevel;
+QString str_TE_resolutionlevel = init_TE_resolutionlevel;
+
+void resetopenMVS_settings()
+{
+    str_RT_use_cglowdensity = init_RT_use_cglowdensity;
+    str_RE_scales = init_RE_scales;
+    str_RE_resolutionlevel = init_RE_resolutionlevel;
+    str_TE_resolutionlevel = init_TE_resolutionlevel;
 }
 
 OMVGguiWizard::OMVGguiWizard(QWidget *parent)
@@ -93,13 +133,13 @@ void OMVGguiWizard::showHelp()
 
     switch (currentId()) {
     case Page_Comp_Features:
-        message = tr("This step will process all Images in the selected folder to prepare them for the next steps.<br>In the bottom part of the window you will see the commandline with the command that will be processed. Feel free to change the parameters transmitted to the terminal at a later stage. To start the process Select the folder containing ALL images and press run. Wait until process is finished.<br> If you have already processed the files you want to work on, you can skip this step by clicking Next Button and resume with another step.");
+        message = tr("This step will process all Images in the selected folder to prepare them for the next steps.<br>In the bottom part of the window you will see the commandline with the command that will be processed. Feel free to change the parameters transmitted to the terminal at a later stage. To start the process Select the folder containing ALL images and press run. Wait until process is finished.<br> If you have already processed the files you want to work on, you can skip this step by clicking Next Button and resume with another step.<br><br><b>OpenMVG is free Software developed by Pierre Moulon & Fabian Castan (<a href='https://github.com/openMVG'>openMVG on Github</a>)</b>");
         break;
     case Page_Pipeline:
-        message = tr("<u>This step will let you chose between one SfM solving options:</u><br><br><b>GlobalACSfM</b> is based on the paper \"Global Fusion of Relative Motions for Robust, Accurate and Scalable Structure from Motion.\" published at ICCV 2013<br>Please use: -p HIGH (describer preset: HIGH option on openMVG_main_ComputeFeatures and -r 0.8 (ratio: 0.8) on openMVG_main_ComputeMatches.<br><br>The<b>ACSfM</b> SfM is an evolution of the implementation used for the paper \"Adaptive Structure from Motion with a contrario model estimation\" published at ACCV 2012.<br>The incremental pipeline is a growing reconstruction process. It starts from an initial two-view reconstruction (the seed) that is iteratively extended by adding new views and 3D points, using pose estimation and triangulation. Due to the incremental nature of the process, successive steps of non-linear refinement, like Bundle Adjustment (BA) and Levenberg-Marquardt steps, are performed to minimize the accumulated error (drift).");
+        message = tr("<u>This step will let you chose between one SfM solving options:</u><br><br><b>GlobalACSfM</b> is based on the paper \"Global Fusion of Relative Motions for Robust, Accurate and Scalable Structure from Motion.\" published at ICCV 2013<br>Please use: -p HIGH (describer preset: HIGH option on openMVG_main_ComputeFeatures and -r 0.8 (ratio: 0.8) on openMVG_main_ComputeMatches.<br><br>The<b>ACSfM</b> SfM is an evolution of the implementation used for the paper \"Adaptive Structure from Motion with a contrario model estimation\" published at ACCV 2012.<br>The incremental pipeline is a growing reconstruction process. It starts from an initial two-view reconstruction (the seed) that is iteratively extended by adding new views and 3D points, using pose estimation and triangulation. Due to the incremental nature of the process, successive steps of non-linear refinement, like Bundle Adjustment (BA) and Levenberg-Marquardt steps, are performed to minimize the accumulated error (drift).<br><br><b>OpenMVG is free Software developed by Pierre Moulon & Fabian Castan (<a href='https://github.com/openMVG'>openMVG on Github</a>)</b>");
         break;
     case Page_MVSSelector:
-        message = tr("<b>OpenMVS</b> allows to compute dense points cloud, surface and textured surfaces of OpenMVG scenes. OpenMVS uses OpenMVG scene thanks to a scene importer.<br><br>OpenMVG exports <b>[PMVS]</b> ready to use project (images, projection matrices and pmvs_options.txt files). If CMVS-PMVS is installed, this program will eun them after exporting.<br><br><b>CMVS</b> is aimed at machines with low memory.<br><br><b>MVE</b> can import a converted openMVG SfM scene and use it to create dense depth map and complete dense 3D models.<br><br>OpenMVG exports <b>[CMPMVS]</b> ready to use project (images, projection matrices and ini configuration file).");
+        message = tr("<b>OpenMVS</b> allows to compute dense points cloud, surface and textured surfaces of OpenMVG scenes. OpenMVS uses OpenMVG scene thanks to a scene importer.<br><br>OpenMVG exports <b>[PMVS]</b> ready to use project (images, projection matrices and pmvs_options.txt files). If CMVS-PMVS is installed, this program will eun them after exporting.<br><br><b>CMVS</b> is aimed at machines with low memory.<br><br><b>MVE</b> can import a converted openMVG SfM scene and use it to create dense depth map and complete dense 3D models.<br><br>OpenMVG exports <b>[CMPMVS]</b> ready to use project (images, projection matrices and ini configuration file).<br><br><b>OpenMVS is free Software developed by cdcseacave (<a href='https://github.com/cdcseacave/openMVS'>openMVS on Github</a>)<br><b>CMVS/PMVS is free Software developed by Pierre Moulon (<a href='https://github.com/pmoulon/CMVS-PMVS'>CMVS/PMVS on Github</a>)</b>");
         break;
     }
     QMessageBox::information(this, tr("Open MVG SfM GUI Help"), message);
@@ -232,7 +272,7 @@ Comp_FeaturesPage::Comp_FeaturesPage(QWidget *parent)
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     advanced_options->addWidget(DescrPresLabel, 3, 0);
     advanced_options->addWidget(DescrPres, 3, 1);
-    DescrPres->setCurrentIndex(0);
+    DescrPres->setCurrentIndex(desc_pres_standard);
     advanced_options->addWidget(DescrMethLabel, 4, 0);
     advanced_options->addWidget(DescrMeth, 4, 1);
     DescrMeth->setCurrentIndex(0);
@@ -599,8 +639,8 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Set specific widgets
     PipelineSelLabel = new QLabel(tr("Select SfM solver:"));
     PipelineSel = new QComboBox;
-    PipelineSel->addItem(tr("Incremental - Starts with two pictures with the best matches)"), QVariant(1));
-    PipelineSel->addItem(tr("Global (Standard)"), QVariant(2));
+    PipelineSel->addItem(tr("Incremental"), QVariant(1));
+    PipelineSel->addItem(tr("Global"), QVariant(2));
     InputPath = new QLineEdit("");
     InputPath->QWidget::hide();
     OptionsPipeline = new QLineEdit("");
@@ -621,7 +661,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     btnImagesFolderPath->QWidget::hide();
     ImagesFolderLabel = new QLabel(tr("Image Folder:"));
     ImagesFolderLabel->QWidget::hide();
-    image_selector_grid_descr = new QLabel(tr("[IncrementalSfM] Select Images with best matches to begin matching:"));
+    image_selector_grid_descr = new QLabel(tr("[IncrementalSfM] Select Images with best matches to begin matching: (optional)"));
     image_selector_grid_descr->QWidget::hide();
     ratioLabel = new QLabel(tr("Ratio:"));
     ratioLabel->QWidget::hide();
@@ -660,7 +700,7 @@ PipelinePage::PipelinePage(QWidget *parent)
     solverImage2Button = new QPushButton(tr("Select"));
     solverImage2Button->QWidget::hide();
     // Global-specific
-    MatrixSelLabel = new QLabel(tr("[GLOBAL] Matrix Filtering:"));
+    MatrixSelLabel = new QLabel(tr("Matrix Filtering:"));
     MatrixSel = new QComboBox;
     MatrixSel->addItem(tr("Essential matrix filtering (Standard for GlobalSfM)"), QVariant(1));
     MatrixSel->addItem(tr("Fundamental matrix filtering (Standard for IncrementalSfM)"), QVariant(2));
@@ -690,7 +730,6 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Set up main Layout
     main_grid = new QGridLayout;  
     input_fields = new QGridLayout;  
-    image_selector_grid = new QGridLayout;  
     terminal_fields = new QGridLayout;     
     advanced_options = new QGridLayout;   
 
@@ -706,42 +745,41 @@ PipelinePage::PipelinePage(QWidget *parent)
     // Step specific layout
     input_fields->addWidget(PipelineSelLabel, 0 , 0);
     input_fields->addWidget(PipelineSel, 0 , 1);
-    PipelineSel->setCurrentIndex(1);
-
-    // Image Selector
-    image_selector_grid_descr->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    image_selector_grid->addWidget(image_selector_grid_descr, 0 , 0, 1, 6);
-    image_selector_grid->addWidget(solverImage1, 1 , 1);
-    image_selector_grid->addWidget(solverImage1Label, 1 , 0);
-    image_selector_grid->addWidget(solverImage1Button, 1 , 2);
-    image_selector_grid->addWidget(solverImage2, 1 , 4);
-    image_selector_grid->addWidget(solverImage2Label, 1 , 3);
-    image_selector_grid->addWidget(solverImage2Button, 1 , 5);
+    PipelineSel->setCurrentIndex(PipelineSel_standard);
 
     // Advanced layout
     AdvancedOptions->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     advanced_options->addWidget(AdvancedOptions, 0, 0, 1, 2);
-    advanced_options->addWidget(MatrixSelLabel, 1, 0);
-    advanced_options->addWidget(MatrixSel, 1, 1);
-    advanced_options->addWidget(CameraSelLabel, 2, 0);
-    advanced_options->addWidget(CameraSel, 2, 1);
+    image_selector_grid_descr->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(image_selector_grid_descr, 1 , 0, 1, 6);
+    advanced_options->addWidget(solverImage1, 2 , 1);
+    advanced_options->addWidget(solverImage1Label, 2 , 0);
+    advanced_options->addWidget(solverImage1Button, 2 , 2);
+    advanced_options->addWidget(solverImage2, 3 , 1);
+    advanced_options->addWidget(solverImage2Label, 3 , 0);
+    advanced_options->addWidget(solverImage2Button, 3 , 2);
+    advanced_options->addWidget(MatrixSelLabel, 4, 0);
+    advanced_options->addWidget(MatrixSel, 4, 1);
+    MatrixSel->setCurrentIndex(matrix_filter_standard);
+    advanced_options->addWidget(CameraSelLabel, 5, 0);
+    advanced_options->addWidget(CameraSel, 5, 1);
     CameraSel->setCurrentIndex(2);
-    advanced_options->addWidget(sliderRatio, 3, 1);
-    advanced_options->addWidget(ratioLabel, 3, 0);
-    advanced_options->addWidget(ratioValue, 3, 2);
-    advanced_options->addWidget(InputLabel, 4, 0);
-    advanced_options->addWidget(InputPath, 4, 1);
-    advanced_options->addWidget(btnInputPath, 4, 2);
-    advanced_options->addWidget(ImagesFolderLabel, 5, 0);
-    advanced_options->addWidget(ImagesFolderPath, 5, 1);
-    advanced_options->addWidget(btnImagesFolderPath, 5, 2);
-    advanced_options->addWidget(OutputLabel, 6, 0);
-    advanced_options->addWidget(OutputPath, 6, 1);
-    advanced_options->addWidget(btnOutputPath, 6, 2);
+    advanced_options->addWidget(sliderRatio, 6, 1);
+    advanced_options->addWidget(ratioLabel, 6, 0);
+    advanced_options->addWidget(ratioValue, 6, 2);
+    advanced_options->addWidget(InputLabel, 7, 0);
+    advanced_options->addWidget(InputPath, 7, 1);
+    advanced_options->addWidget(btnInputPath, 7, 2);
+    advanced_options->addWidget(ImagesFolderLabel, 8, 0);
+    advanced_options->addWidget(ImagesFolderPath, 8, 1);
+    advanced_options->addWidget(btnImagesFolderPath, 8, 2);
+    advanced_options->addWidget(OutputLabel, 9, 0);
+    advanced_options->addWidget(OutputPath, 9, 1);
+    advanced_options->addWidget(btnOutputPath, 9, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 7, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 10, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 8, 0, 1, 3);
+    advanced_options->addWidget(command, 11, 0, 1, 3);
 
     terminal_fields->addWidget(CommandLabel, 0, 0); 
     terminal_fields->addWidget(btnCancel, 0, 7); 
@@ -751,9 +789,8 @@ PipelinePage::PipelinePage(QWidget *parent)
 
     // Insert into main Layout
     main_grid->addLayout(input_fields, 0, 0);
-    main_grid->addLayout(image_selector_grid, 1, 0);
-    main_grid->addLayout(advanced_options, 2, 0);
-    main_grid->addLayout(terminal_fields, 3, 0);
+    main_grid->addLayout(advanced_options, 1, 0);
+    main_grid->addLayout(terminal_fields, 2, 0);
 
     // Finalize
     setLayout(main_grid);
@@ -904,12 +941,6 @@ void PipelinePage::btnPathbuttonsClicked(QString mode)
 void PipelinePage::btnProcessClicked()
 {
     QString get_SelItem = PipelineSel->itemData(PipelineSel->currentIndex()).toString();
-    // Display warnign if there is a field missing in first pipeline
-    if((get_SelItem == "1") && ((solverImage1->text() == "") || (solverImage2->text() == "")))  {
-	QMessageBox::warning(this, tr("Error"),
-                             tr("Please select the two Pictures with the best matches first"));
-    }
-    else {
 	// Disable Skip button + Back Button + Run Button
 	wizard()->button(QWizard::NextButton)->setEnabled(false);
 	wizard()->button(QWizard::BackButton)->setEnabled(false);
@@ -926,7 +957,6 @@ void PipelinePage::btnProcessClicked()
 	txtReport->clear();
 	str_command = command->text();
 	process_command->start("/bin/bash", QStringList() << "-c" << QString(str_command));
-    }
 }
 
 // Handle regular output
@@ -1108,7 +1138,7 @@ void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 	    solverImage2Label->QWidget::hide();
 	    image_selector_grid_descr->QWidget::hide();
 	    // Change matrix selector according to Pipeline (Incremental: g, Global: e)
-	    MatrixSel->setCurrentIndex(2);
+	    MatrixSel->setCurrentIndex(0);
 	    qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"e\"");
 	    // change Folder
 	    qDebug() << Folder.replace("reconstruction_incremental", "reconstruction_global");
@@ -1127,14 +1157,14 @@ void PipelinePage::on_selectors_changed(int selection_num, QString option_decl)
 		btnImagesFolderPath->QWidget::show();
 		CameraSel->QWidget::show();
 		CameraSelLabel->QWidget::show();
+		solverImage1->QWidget::show();
+		solverImage1Button->QWidget::show();
+		solverImage1Label->QWidget::show();
+		solverImage2->QWidget::show();
+		solverImage2Button->QWidget::show();
+		solverImage2Label->QWidget::show();
+		image_selector_grid_descr->QWidget::show();
 	    }
-	    solverImage1->QWidget::show();
-	    solverImage1Button->QWidget::show();
-	    solverImage1Label->QWidget::show();
-	    solverImage2->QWidget::show();
-	    solverImage2Button->QWidget::show();
-	    solverImage2Label->QWidget::show();
-            image_selector_grid_descr->QWidget::show();
 	    // Change matrix selector according to Pipeline (Incremental: g, Global: e)
             MatrixSel->setCurrentIndex(1);
 	    qDebug() << str_commando.replace(QRegExp ("matrix_filter=\"([^\"]*)\""), "matrix_filter=\"f\"");
@@ -1251,12 +1281,28 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     btnCancel->setEnabled(false);
     CommandLabel = new QLabel(tr("Output:"));
     // openMVS specific
-    UseDensify = new QCheckBox(tr("[openmVS] Densify Point Cloud"));
+    DensifyLabel = new QLabel(tr("<b>Step 1 - Densify Point Cloud (optional):</b>"));
+    DensifyLabel->QWidget::hide();
+    UseDensify = new QCheckBox(tr("Run Densify Point Cloud"));
     UseDensify->QWidget::hide();
     UseDensify->QAbstractButton::setChecked(true);
-    UseRefine = new QCheckBox(tr("[openmVS] Refine Mesh"));
+    DensifyOptionsButton = new QPushButton(tr("Densify Settings"));
+    DensifyOptionsButton->QWidget::hide();
+    ReconstructLabel = new QLabel(tr("<b>Step 2 - Reconstruct Mesh:</b>"));
+    ReconstructLabel->QWidget::hide();
+    ReconstructOptionsButton = new QPushButton(tr("Reconstruct Settings"));
+    ReconstructOptionsButton->QWidget::hide();
+    RefineLabel = new QLabel(tr("<b>Step 3 - Refine Mesh:</b>"));
+    RefineLabel->QWidget::hide();
+    RefineOptionsButton = new QPushButton(tr("Refine Settings"));
+    RefineOptionsButton->QWidget::hide();
+    UseRefine = new QCheckBox(tr("Run Refine Mesh (optional)"));
     UseRefine->QWidget::hide();
     UseRefine->QAbstractButton::setChecked(true);
+    TextureLabel = new QLabel(tr("<b>Step 4 - Texture Mesh:</b>"));
+    TextureLabel->QWidget::hide();
+    TextureOptionsButton = new QPushButton(tr("Texture Settings"));
+    TextureOptionsButton->QWidget::hide();
     // CMVS specific
     // Documentation for PMVS2: http://www.di.ens.fr/pmvs/documentation.html
     ImageCountLabel = new QLabel(tr("[Bundler] Max imagecount per cluster:"));
@@ -1317,40 +1363,52 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     advanced_options->addWidget(InputPath, 2, 1);
     advanced_options->addWidget(btnInputPath, 2, 2);
     // openMVS options
+    DensifyLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(DensifyLabel, 3, 0, 1, 2);
     UseDensify->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(UseDensify, 3, 0, 1, 2);
+    advanced_options->addWidget(UseDensify, 4, 0, 1, 2);
+    advanced_options->addWidget(DensifyOptionsButton, 5, 0);
+    ReconstructLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(ReconstructLabel, 6, 0, 1, 2);
+    advanced_options->addWidget(ReconstructOptionsButton, 7, 0);
+    RefineLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(RefineLabel, 8, 0, 1, 2);
     UseRefine->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(UseRefine, 4, 0, 1, 2);
+    advanced_options->addWidget(UseRefine, 9, 0, 1, 2);
+    advanced_options->addWidget(RefineOptionsButton, 10, 0);
+    TextureLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    advanced_options->addWidget(TextureLabel, 11, 0, 1, 2);
+    advanced_options->addWidget(TextureOptionsButton, 12, 0);
     // PMVS options
     ImageCountLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(ImageCountLabel, 5, 0, 1, 2);
-    advanced_options->addWidget(ImageCount, 5 , 2);
+    advanced_options->addWidget(ImageCountLabel, 3, 0, 1, 2);
+    advanced_options->addWidget(ImageCount, 3 , 2);
     numCPULabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(numCPULabel, 6, 0, 1, 2);
-    advanced_options->addWidget(numCPU, 6 , 2);
+    advanced_options->addWidget(numCPULabel, 4, 0, 1, 2);
+    advanced_options->addWidget(numCPU, 4 , 2);
     LevelLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(LevelLabel, 7, 0, 1, 2);
-    advanced_options->addWidget(level, 7 , 2);
+    advanced_options->addWidget(LevelLabel, 5, 0, 1, 2);
+    advanced_options->addWidget(level, 5 , 2);
     csizeLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(csizeLabel, 8, 0, 1, 2);
-    advanced_options->addWidget(csize, 8, 2);
+    advanced_options->addWidget(csizeLabel, 6, 0, 1, 2);
+    advanced_options->addWidget(csize, 6, 2);
     thresholdLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(thresholdLabel, 9, 0, 1, 2);
-    advanced_options->addWidget(threshold, 9, 2);
+    advanced_options->addWidget(thresholdLabel, 7, 0, 1, 2);
+    advanced_options->addWidget(threshold, 7, 2);
     wsizeLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(wsizeLabel, 10, 0, 1, 2);
-    advanced_options->addWidget(wsize, 10, 2);
+    advanced_options->addWidget(wsizeLabel, 8, 0, 1, 2);
+    advanced_options->addWidget(wsize, 8, 2);
     minImageLabel->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(minImageLabel, 11, 0, 1, 2);
-    advanced_options->addWidget(minImage, 11, 2);
+    advanced_options->addWidget(minImageLabel, 9, 0, 1, 2);
+    advanced_options->addWidget(minImage, 9, 2);
     // Shared options
-    advanced_options->addWidget(OutputLabel, 12, 0);
-    advanced_options->addWidget(OutputPath, 12, 1);
-    advanced_options->addWidget(btnOutputPath, 12, 2);
+    advanced_options->addWidget(OutputLabel, 13, 0);
+    advanced_options->addWidget(OutputPath, 13, 1);
+    advanced_options->addWidget(btnOutputPath, 13, 2);
     TerminalMode->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-    advanced_options->addWidget(TerminalMode, 13, 0, 1, 2);
+    advanced_options->addWidget(TerminalMode, 14, 0, 1, 2);
     command->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);	
-    advanced_options->addWidget(command, 14, 0, 1, 3);
+    advanced_options->addWidget(command, 15, 0, 1, 3);
     terminal_fields->addWidget(CommandLabel, 0, 0);  
     terminal_fields->addWidget(btnCancel, 0, 7);
     terminal_fields->addWidget(btnProcess, 0, 8);
@@ -1382,6 +1440,10 @@ MVSSelectorPage::MVSSelectorPage(QWidget *parent)
     // connect openMVS options
     connect(UseDensify, &QCheckBox::stateChanged, [this](int box_status) { MVSSelectorPage::btnUseopenMVSoptionsClicked(box_status, "use_densify"); } );
     connect(UseRefine, &QCheckBox::stateChanged, [this](int box_status) { MVSSelectorPage::btnUseopenMVSoptionsClicked(box_status, "use_refine"); } );
+    connect(DensifyOptionsButton, &QPushButton::clicked, [this]() { btnOptionsbuttonsClicked("densify"); });
+    connect(ReconstructOptionsButton, &QPushButton::clicked, [this]() { btnOptionsbuttonsClicked("reconstruct"); });
+    connect(RefineOptionsButton, &QPushButton::clicked, [this]() { btnOptionsbuttonsClicked("refine"); });
+    connect(TextureOptionsButton, &QPushButton::clicked, [this]() { btnOptionsbuttonsClicked("texture"); });
     // connect PMVS options
     connect(ImageCount, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "max_imagecount"); } );
     connect(numCPU, &QLineEdit::textEdited, [this](QString new_content) { MVSSelectorPage::pmvsOptionsclicked(new_content, "cpu"); } );
@@ -1593,12 +1655,13 @@ void MVSSelectorPage::btnAdvancedOptionsClicked(int checkstate)
 	// Show sepcific options
 	if (get_SelItem == "1")
         {
-   	    UseDensify->QWidget::show();
-   	    UseRefine->QWidget::show();
+	    openMVSoptionsdisplay();
+	    PMVSoptionshide();
         }
         else if (get_SelItem == "3")
         {
 	    PMVSoptionsdisplay();
+	    openMVSoptionshide();
         }
     }
     else {
@@ -1613,9 +1676,8 @@ void MVSSelectorPage::btnAdvancedOptionsClicked(int checkstate)
     	OutputPath->QWidget::hide();
     	btnOutputPath->QWidget::hide();
     	OutputLabel->QWidget::hide();
-   	UseDensify->QWidget::hide();
-   	UseRefine->QWidget::hide();
 	PMVSoptionshide();
+	openMVSoptionshide();
     }
 }
 
@@ -1629,6 +1691,42 @@ void MVSSelectorPage::btnTerminalModeClicked(int checkstate)
     else {
 	command->setEnabled(false);
 	command->QWidget::hide();
+    }
+}
+
+// Event: Set openMVS options visibility
+void MVSSelectorPage::openMVSoptionsdisplay()
+{
+    UseDensify->QWidget::show();
+    UseRefine->QWidget::show();
+    ReconstructOptionsButton->QWidget::show();
+    RefineOptionsButton->QWidget::show();
+    TextureOptionsButton->QWidget::show();
+    DensifyLabel->QWidget::show();
+    /* currently hidden
+    DensifyOptionsButton->QWidget::show();
+    */
+    ReconstructLabel->QWidget::show();
+    RefineLabel->QWidget::show();
+    TextureLabel->QWidget::show();
+}
+void MVSSelectorPage::openMVSoptionshide()
+{
+    UseDensify->QWidget::hide();
+    UseRefine->QWidget::hide();
+    ReconstructOptionsButton->QWidget::hide();
+    RefineOptionsButton->QWidget::hide();
+    TextureOptionsButton->QWidget::hide();
+    DensifyLabel->QWidget::hide();
+    DensifyOptionsButton->QWidget::hide();
+    ReconstructLabel->QWidget::hide();
+    RefineLabel->QWidget::hide();
+    TextureLabel->QWidget::hide();
+    // if we are not in openMVS menu, reset values to standard
+    if (MVSSel->itemData(MVSSel->currentIndex()).toString() != "1")
+    {
+	initialcommandline_mvs_openMVS = initialize_commandline_mvs_openMVS();
+	resetopenMVS_settings();
     }
 }
 
@@ -1666,7 +1764,7 @@ void MVSSelectorPage::PMVSoptionshide()
     wsize->QWidget::hide();
     minImageLabel->QWidget::hide();
     minImage->QWidget::hide();
-    // if we are not in CMVS meun, reset values to standard
+    // if we are not in CMVS menu, reset values to standard
     if (MVSSel->itemData(MVSSel->currentIndex()).toString() != "3")
     {
 	ImageCount->setText("100");
@@ -1697,9 +1795,9 @@ void MVSSelectorPage::on_MVSSel_changed(int selection_num)
 	// Hide Matrix selector + show Images
 	if(AdvancedOptions->checkState() == Qt::Checked)
 	{
-   	    UseDensify->QWidget::show();
-   	    UseRefine->QWidget::show();
+   	    openMVSoptionsdisplay();
 	}
+	initialcommandline_mvs_openMVS = initialize_commandline_mvs_openMVS();
         str_commando = initialcommandline_mvs_openMVS;
 	UseDensify->QAbstractButton::setChecked(true);
 	UseRefine->QAbstractButton::setChecked(true);
@@ -1707,8 +1805,7 @@ void MVSSelectorPage::on_MVSSel_changed(int selection_num)
     }
     else if(selection_num == 1)
     {
-	UseDensify->QWidget::hide();
-	UseRefine->QWidget::hide();
+   	openMVSoptionshide();
 
         str_commando = initialcommandline_mvs_stand;
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"pmvs\"");
@@ -1716,8 +1813,7 @@ void MVSSelectorPage::on_MVSSel_changed(int selection_num)
     }
     else if(selection_num == 2)
     {
-	UseDensify->QWidget::hide();
-	UseRefine->QWidget::hide();
+   	openMVSoptionshide();
 
         str_commando = initialcommandline_mvs_CMVS;
 	qDebug() << str_commando.replace(QRegExp ("cpu=\"([^\"]*)\""), "cpu=\"" + get_num_of_CPUs() + "\"");
@@ -1729,21 +1825,19 @@ void MVSSelectorPage::on_MVSSel_changed(int selection_num)
     }
     else if(selection_num == 3)
     {
-	UseDensify->QWidget::hide();
-	UseRefine->QWidget::hide();
+   	openMVSoptionshide();
+	PMVSoptionshide();
 
         str_commando = initialcommandline_mvs_stand;
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"cmpmvs\"");
-	PMVSoptionshide();
     }
     else if(selection_num == 4)
     {
-	UseDensify->QWidget::hide();
-	UseRefine->QWidget::hide();
+   	openMVSoptionshide();
+	PMVSoptionshide();
 
         str_commando = initialcommandline_mvs_stand;
 	qDebug() << str_commando.replace(QRegExp ("step=\"([^\"]*)\""), "step=\"mve\"");
-	PMVSoptionshide();
     }
     enable_rerunning();
     get_standard_paths(str_commando);
@@ -1765,7 +1859,6 @@ void MVSSelectorPage::btnUseopenMVSoptionsClicked(int checkstate, QString option
     command->setText(str_commando);
 }
 
-
 // Event pmvsOptions clicked
 void MVSSelectorPage::pmvsOptionsclicked(QString new_content, QString option_decl)
 {
@@ -1774,3 +1867,122 @@ void MVSSelectorPage::pmvsOptionsclicked(QString new_content, QString option_dec
     qDebug() << str_commando.replace(QRegExp (option_decl + "=\"([^\"]*)\""), option_decl + "=\"" + new_content + "\"");
     command->setText(str_commando);
 }
+
+//Launch Dialogs for openmVS setting
+void MVSSelectorPage::btnOptionsbuttonsClicked(QString mode)
+{
+    if(mode == "densify") { openMVS_dialog_switcher = 0; }
+    else if(mode == "reconstruct") { openMVS_dialog_switcher = 1;}
+    else if(mode == "refine") { openMVS_dialog_switcher = 2;}
+    else if(mode == "texture") { openMVS_dialog_switcher = 3;}
+
+    openMVSDialog *openmvsdialog = new openMVSDialog;
+    openmvsdialog->setWindowModality(Qt::ApplicationModal);
+    openmvsdialog->show();
+
+    // connect Slots
+    connect(openmvsdialog, SIGNAL(resultAvailable(QString, QString)), this, SLOT(getDialogResults(QString, QString)));
+}
+// catch results
+void MVSSelectorPage::getDialogResults(QString mode, QString new_content)
+{
+    QString str_commando;
+    str_commando = command->text();
+
+    qDebug() << str_commando.replace(QRegExp (mode + "=\"([^\"]*)\""), mode + "=\"" + new_content + "\"");
+    command->setText(str_commando);
+
+    // fill in values for rerunning dialog
+    if(mode == "RT_use_cglowdensity") { str_RT_use_cglowdensity = new_content; }
+    else if(mode == "RE_scales") { str_RE_scales = new_content; }
+    else if(mode == "RE_resolutionlevel") { str_RE_resolutionlevel = new_content; }
+    else if(mode == "TE_resolutionlevel") { str_TE_resolutionlevel = new_content; }
+}
+
+// openMVS Dialog
+openMVSDialog::openMVSDialog(QWidget *parent)
+      : QDialog(parent)
+{
+    switch (openMVS_dialog_switcher) 
+    {
+/* currently hidden
+	case 0: //Densify Settings
+	    this->setWindowTitle("Densify Settings");
+	    mainLayout = new QGridLayout;
+	    mainLayout->addWidget();
+	break;
+
+*/	
+	case 1: // Reconstruct Settings
+	    this->setWindowTitle("Reconstruct Settings");
+	    RT_use_cglowdensity = new QCheckBox(tr("gclowdensity (compatibility mode)"));
+	    mainLayout = new QGridLayout;
+	    mainLayout->addWidget(RT_use_cglowdensity);
+
+	    // Set values
+	    if(str_RT_use_cglowdensity == "true") { RT_use_cglowdensity->QCheckBox::setChecked(true); }
+	    if(str_RT_use_cglowdensity == "false") { RT_use_cglowdensity->QCheckBox::setChecked(false); }
+
+	    // pass actions to handlers
+	    connect(RT_use_cglowdensity, &QCheckBox::stateChanged, [this](int box_status) { openMVSDialog::checkboxClicked(box_status, "RT_use_cglowdensity"); } );
+	break;
+
+	case 2: // Refine Settings
+	    this->setWindowTitle("Refine Settings");
+	    RE_scalesLabel = new QLabel(tr("Scales (how many iterations to run mesh optimization on multi-scale images):"));
+	    RE_scales = new QLineEdit;
+	    RE_scales->QWidget::setFixedWidth(100);
+	    RE_scales->setAlignment(Qt::AlignHCenter);	
+	    RE_resolutionlevelLabel = new QLabel(tr("resolutionlevel (how many times the source images get sized down):"));
+	    RE_resolutionlevel = new QLineEdit;
+	    RE_resolutionlevel->QWidget::setFixedWidth(100);
+	    RE_resolutionlevel->setAlignment(Qt::AlignHCenter);	
+	    mainLayout = new QGridLayout;
+	    mainLayout->addWidget(RE_scalesLabel, 0, 0);
+	    mainLayout->addWidget(RE_scales, 0, 1);
+	    mainLayout->addWidget(RE_resolutionlevelLabel, 1, 0);
+	    mainLayout->addWidget(RE_resolutionlevel, 1, 1);
+
+	    //Set values
+	    RE_scales->setText(str_RE_scales);
+	    RE_resolutionlevel->setText(str_RE_resolutionlevel);
+
+	    // pass actions to handlers
+	    connect(RE_scales, &QLineEdit::textEdited, [this](QString new_content) { openMVSDialog::valueChanged("RE_scales", new_content); } );
+	    connect(RE_resolutionlevel, &QLineEdit::textEdited, [this](QString new_content) { openMVSDialog::valueChanged("RE_resolutionlevel", new_content); } );
+	break;
+
+	case 3: // Texture Settings
+	    this->setWindowTitle("Texture Settings");
+	    TE_resolutionlevelLabel = new QLabel(tr("resolutionlevel (how many times the source images get sized down):"));
+	    TE_resolutionlevel = new QLineEdit;
+	    TE_resolutionlevel->QWidget::setFixedWidth(100);
+	    TE_resolutionlevel->setAlignment(Qt::AlignHCenter);	
+	    mainLayout = new QGridLayout;
+	    mainLayout->addWidget(TE_resolutionlevelLabel, 0, 0);
+	    mainLayout->addWidget(TE_resolutionlevel, 0, 1);
+
+	    //Set values
+	    TE_resolutionlevel->setText(str_TE_resolutionlevel);
+
+	    // pass actions to handlers
+	    connect(TE_resolutionlevel, &QLineEdit::textEdited, [this](QString new_content) { openMVSDialog::valueChanged("TE_resolutionlevel", new_content); } );
+	break;
+    }
+    setLayout(mainLayout);
+}
+
+void openMVSDialog::valueChanged(QString mode, QString new_content)
+{
+    emit resultAvailable(mode, new_content);
+}
+
+void openMVSDialog::checkboxClicked(int checkstate, QString mode)
+{
+    QString new_content;
+    if(checkstate == Qt::Checked) { new_content = "true"; }
+    else { new_content = "false"; }
+
+    emit resultAvailable(mode, new_content);
+}
+

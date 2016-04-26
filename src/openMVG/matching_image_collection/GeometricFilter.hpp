@@ -67,10 +67,10 @@ void ImageCollectionGeometricFilter::Robust_model_estimation
 #endif
   for (int i = 0; i < (int)putative_matches.size(); ++i)
   {
-    PairWiseMatches::const_iterator iter = putative_matches.begin();
+    auto iter = putative_matches.begin();
     advance(iter,i);
 
-    const Pair current_pair = iter->first;
+    Pair current_pair = iter->first;
     const std::vector<IndMatch> & vec_PutativeMatches = iter->second;
 
     //-- Apply the geometric filter (robust model estimation)
@@ -104,7 +104,7 @@ void ImageCollectionGeometricFilter::Robust_model_estimation
   }
 }
 
-} // namespace openMVG
 } // namespace matching_image_collection
+} // namespace openMVG 
 
 

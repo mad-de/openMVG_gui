@@ -66,11 +66,15 @@ TEST(SEQUENTIAL_SFM, Known_Intrinsics) {
   sfmEngine.SetFeaturesProvider(feats_provider.get());
   sfmEngine.SetMatchesProvider(matches_provider.get());
 
-  // Set an initial pair
-  sfmEngine.setInitialPair(Pair(0,1));
-
   // Configure reconstruction parameters (intrinsic parameters are held constant)
   sfmEngine.Set_Intrinsics_Refinement_Type(cameras::Intrinsic_Parameter_Type::NONE);
+
+  // Will use view ids (0,1) as the initial pair
+  Views::const_iterator iter_view_0 = sfm_data_2.GetViews().begin();
+  Views::const_iterator iter_view_1 = sfm_data_2.GetViews().begin();
+  std::advance(iter_view_1, 1);
+  sfmEngine.setInitialPair(
+    Pair(iter_view_0->second.get()->id_view, iter_view_1->second.get()->id_view));
 
   EXPECT_TRUE (sfmEngine.Process());
 
@@ -128,11 +132,15 @@ TEST(SEQUENTIAL_SFM, Partially_Known_Intrinsics) {
   sfmEngine.SetFeaturesProvider(feats_provider.get());
   sfmEngine.SetMatchesProvider(matches_provider.get());
 
-  // Set an initial pair
-  sfmEngine.setInitialPair(Pair(0,1));
-
   // Configure reconstruction parameters (intrinsic parameters are held constant)
   sfmEngine.Set_Intrinsics_Refinement_Type(cameras::Intrinsic_Parameter_Type::NONE);
+
+  // Will use view ids (0,1) as the initial pair
+  Views::const_iterator iter_view_0 = sfm_data_2.GetViews().begin();
+  Views::const_iterator iter_view_1 = sfm_data_2.GetViews().begin();
+  std::advance(iter_view_1, 1);
+  sfmEngine.setInitialPair(Pair(iter_view_0->second.get()->id_view,
+    iter_view_1->second.get()->id_view));
 
   EXPECT_TRUE (sfmEngine.Process());
 

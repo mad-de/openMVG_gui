@@ -49,8 +49,8 @@ def rename_matches(char_in, solver, folder):
  elif solver == "1":
   char_out = "e"
  if char_in != char_out:
-  filename_in = os.path.join(folder, "matches." + char_in + ".txt")
-  filename_out = os.path.join(folder, "matches." + char_out + ".txt")
+  filename_in = os.path.join(folder, "matches." + char_in + ".bin")
+  filename_out = os.path.join(folder, "matches." + char_out + ".bin")
   os.rename(filename_in, filename_out)
 
 # Check if input folder is not empty
@@ -270,7 +270,7 @@ elif user_vars["step"] == "openMVS":
   os.mkdir(user_vars["output_dir"])
 
  # 1. Import
- curr_string = [ os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2openMVS"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.bin"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs") ]
+ curr_string = [ os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2openMVS"),  "-i", os.path.join(user_vars["inputpath"], "sfm_data.bin"), "-o", os.path.join(user_vars["output_dir"], "scene.mvs"), "-d",  os.path.join(user_vars["output_dir"], "undistorted_images") ]
  pMVSImport = subprocess.Popen(curr_string)
  pMVSImport.wait()
  still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene.mvs")), curr_string, "openMVG_main_openMVG2openMVS")
@@ -282,7 +282,7 @@ elif user_vars["step"] == "openMVS":
  else:  
   # 2. Densify Point Cloud (optional)
   if still_working and user_vars["use_densify"] == "ON":
-   curr_string = [os.path.join(OPENMVS_BIN, "DensifyPointCloud"), os.path.join(user_vars["output_dir"], "scene.mvs") ]
+   curr_string = [os.path.join(OPENMVS_BIN, "DensifyPointCloud"), os.path.join(user_vars["output_dir"], "scene.mvs"), "-w", user_vars["output_dir"] ]
    pMVSDensify = subprocess.Popen(curr_string)
    pMVSDensify.wait()
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], "scene_dense.mvs")), curr_string, "DensifyPointCloud")
@@ -298,14 +298,14 @@ elif user_vars["step"] == "openMVS":
    this_refine_file = "scene_mesh_refine.mvs";
 
   if still_working:
-   curr_string = [os.path.join(OPENMVS_BIN, "ReconstructMesh"), os.path.join(user_vars["output_dir"], this_input_file)]
+   curr_string = [os.path.join(OPENMVS_BIN, "ReconstructMesh"), os.path.join(user_vars["output_dir"], this_input_file), "-w", user_vars["output_dir"], "-v", "3", "--gclowdensity", user_vars["RT_use_cglowdensity"], "--export-type", "obj" ]
    pMVSReconstruct = subprocess.Popen(curr_string)
    pMVSReconstruct.wait()
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], this_output_file)), curr_string, "ReconstructMesh")
 
   # 4. Refine Meshes (optional)
   if still_working and user_vars["use_refine"] == "ON":
-   curr_string = [os.path.join(OPENMVS_BIN, "RefineMesh"), os.path.join(user_vars["output_dir"], this_output_file)]
+   curr_string = [os.path.join(OPENMVS_BIN, "RefineMesh"), os.path.join(user_vars["output_dir"], this_output_file), "-w", user_vars["output_dir"], "-v", "3", "--export-type", "obj", "--scales", user_vars["RE_scales"], "--resolution-level", user_vars["RE_resolutionlevel"]]
    pMVSRefine = subprocess.Popen(curr_string)
    pMVSRefine.wait()
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], this_refine_file)), curr_string, "RefineMesh")
@@ -313,13 +313,13 @@ elif user_vars["step"] == "openMVS":
   # 5. Texture Meshes
   if user_vars["use_refine"] == "ON":
    texture_input_file = this_refine_file;
-   texture_output_file = texture_input_file.replace(".mvs", "_texture.ply");
+   texture_output_file = texture_input_file.replace(".mvs", "_texture.obj");
   else:
    texture_input_file = this_output_file;
-   texture_output_file = texture_input_file.replace(".mvs", "_texture.ply");
+   texture_output_file = texture_input_file.replace(".mvs", "_texture.obj");
 
   if still_working:
-   curr_string = [os.path.join(OPENMVS_BIN, "TextureMesh"), os.path.join(user_vars["output_dir"],texture_input_file)]
+   curr_string = [os.path.join(OPENMVS_BIN, "TextureMesh"), os.path.join(user_vars["output_dir"],texture_input_file), "-w", user_vars["output_dir"], "--export-type", "obj",  "--resolution-level", user_vars["TE_resolutionlevel"] ]
    pMVSTexture = subprocess.Popen(curr_string)
    pMVSTexture.wait()
    still_working = erroroutput(os.path.exists(os.path.join(user_vars["output_dir"], texture_output_file)), curr_string, "TextureMesh")
@@ -328,7 +328,11 @@ elif user_vars["step"] == "openMVS":
     with open(os.path.join(user_vars["inputpath"],"Pipeline_Options.txt"), "r") as text_file:
      pipeline_output = text_file.readline()
     text_file.close()
-    options_display = pipeline_output + "[MVS: OpenMVS] Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + ";\n"
+    options_display = pipeline_output + "[MVS: OpenMVS] Densify: " + user_vars["use_densify"] + "; Refine: " + user_vars["use_refine"] + ", scales: " + user_vars["RE_scales"] + "resolution-level: " + user_vars["RE_resolutionlevel"] + "; Texture: resolution-level: " + user_vars["TE_resolutionlevel"] + ";\n"
+    # Save options to file
+    with open(os.path.join(user_vars["output_dir"],"openMVS_Options.txt"), "w") as text_file_write:
+     text_file_write.write(options_display)
+    text_file_write.close()
     # Data output
     print "preview_path " + os.path.join(user_vars["output_dir"], texture_output_file) + " end_path";
     print "options_used " + options_display + " end_options_used";

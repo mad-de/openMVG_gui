@@ -140,7 +140,6 @@ private:
     QGridLayout *advanced_options;
     QGridLayout *input_fields;
     QGridLayout *terminal_fields;
-    QGridLayout *image_selector_grid;
     QWidget *image_selector_layout; 
     QLabel *image_selector_grid_descr;
     QSlider *sliderRatio;
@@ -165,7 +164,7 @@ private:
 
 class MVSSelectorPage : public QWizardPage
 {
-    Q_OBJECT
+    Q_OBJECT;
 
 public:
     MVSSelectorPage(QWidget *parent = 0);
@@ -173,6 +172,8 @@ public:
     void cleanupPage();
     void showEvent(QShowEvent*) Q_DECL_OVERRIDE;
     int nextId() const Q_DECL_OVERRIDE;
+
+    QLineEdit *command;
 
 private slots:
     void cancelProcess();
@@ -183,6 +184,8 @@ private slots:
     void enable_rerunning();
     void PMVSoptionsdisplay();
     void PMVSoptionshide();
+    void openMVSoptionsdisplay();
+    void openMVSoptionshide();
     void get_standard_paths(QString str_commando);
     void btnPathbuttonsClicked(QString mode);
     void btnTerminalModeClicked(int checkstate);
@@ -190,6 +193,8 @@ private slots:
     void on_MVSSel_changed(int selection_num);
     void btnUseopenMVSoptionsClicked(int checkstate, QString option_decl);
     void pmvsOptionsclicked(QString new_content, QString option_decl);
+    void btnOptionsbuttonsClicked(QString mode);
+    void getDialogResults(QString mode, QString new_content);
 
 private:
     QLineEdit *StatusMVSSelectorPage;
@@ -204,7 +209,6 @@ private:
     QCheckBox *AdvancedOptions;
     QCheckBox *TerminalMode;
     QTextEdit *txtReport;
-    QLineEdit *command;
     QLabel *CommandLabel;
     QProcess *process_command;
     QGridLayout *main_grid;
@@ -213,8 +217,16 @@ private:
     QGridLayout *terminal_fields;
     QPushButton *btnProcess;
     QPushButton *btnCancel;
+    QLabel *DensifyLabel;
     QCheckBox *UseRefine;
     QCheckBox *UseDensify;
+    QLabel *ReconstructLabel;
+    QLabel *RefineLabel;
+    QLabel *TextureLabel;
+    QPushButton *DensifyOptionsButton;
+    QPushButton *ReconstructOptionsButton;
+    QPushButton *RefineOptionsButton;
+    QPushButton *TextureOptionsButton;
     QLineEdit *preview_mvs;
     QLineEdit *OptionsMVS;
     QLabel *ImageCountLabel;
@@ -231,6 +243,33 @@ private:
     QLineEdit *wsize;
     QLabel *minImageLabel;
     QLineEdit *minImage;
+};
+
+// openMVS Dialog
+
+class openMVSDialog : public QDialog
+{
+     Q_OBJECT
+
+public:
+     openMVSDialog(QWidget *parent = 0);
+
+signals:
+    void resultAvailable(QString new_content, QString mode);
+
+private slots:
+    void checkboxClicked(int checkstate, QString mode);
+    void valueChanged(QString mode, QString new_content);
+
+private:
+     QGridLayout *mainLayout;
+     QCheckBox *RT_use_cglowdensity;
+     QLabel *RE_scalesLabel;
+     QLineEdit *RE_scales;
+     QLabel *RE_resolutionlevelLabel;
+     QLineEdit *RE_resolutionlevel;
+     QLabel *TE_resolutionlevelLabel;
+     QLineEdit *TE_resolutionlevel;
 };
 
 #endif

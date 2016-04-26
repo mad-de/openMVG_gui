@@ -65,7 +65,7 @@ inline bool Save_PLY(
           if (sfm_data.IsPoseAndIntrinsicDefined(view.second.get()))
           {
             const geometry::Pose3 pose = sfm_data.GetPoseOrDie(view.second.get());
-            stream << pose.center().transpose()
+            stream << pose.center().transpose().cast<float>()
               << " 0 255 0" << '\n';
           }
         }
@@ -75,10 +75,9 @@ inline bool Save_PLY(
       {
         // Export structure points as White points
         const Landmarks & landmarks = sfm_data.GetLandmarks();
-        for (Landmarks::const_iterator iterLandmarks = landmarks.begin();
-          iterLandmarks != landmarks.end();
-          ++iterLandmarks)  {
-          stream << iterLandmarks->second.X.transpose() << " 255 255 255" << '\n';
+        for ( const auto & iterLandmarks : landmarks )
+        {
+          stream << iterLandmarks.second.X.transpose().cast<float>() << " 255 255 255" << '\n';
         }
       }
 
@@ -86,10 +85,9 @@ inline bool Save_PLY(
       {
         // Export GCP as Yellow points
         const Landmarks & landmarks = sfm_data.GetControl_Points();
-        for (Landmarks::const_iterator iterGCP = landmarks.begin();
-          iterGCP != landmarks.end();
-          ++iterGCP)  {
-          stream << iterGCP->second.X.transpose() << " 255 255 0" << '\n';
+        for ( const auto & iterGCP : landmarks )
+        {
+          stream << iterGCP.second.X.transpose().cast<float>() << " 255 255 0" << '\n';
         }
       }
 

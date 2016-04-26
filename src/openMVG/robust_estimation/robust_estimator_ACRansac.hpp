@@ -49,7 +49,7 @@
 namespace openMVG {
 namespace robust{
 
-namespace acrancac_nfa_internal {
+namespace acransac_nfa_internal {
 
 /// logarithm (base 10) of binomial coefficient
 template <typename T>
@@ -251,7 +251,7 @@ NFA_Interface<Kernel>::ComputeNFA_and_inliers
         if (m_residuals[index] <= nfa_threshold.second)
           inliers.push_back(index);
       }
-      return true;
+      return inliers.size() > Kernel::MINIMUM_SAMPLES;
     }
   }
   else // exhaustive computation
@@ -317,9 +317,8 @@ static void UniformSample
   std::vector<size_t> *sample
 )
 {
-  sample->resize(sizeSample);
   robust::UniformSample(sizeSample, vec_index.size(), sample);
-  for(int i = 0; i < sizeSample; ++i)
+  for (int i = 0; i < sizeSample; ++i)
     (*sample)[i] = vec_index[ (*sample)[i] ];
 }
 
@@ -368,7 +367,7 @@ std::pair<double, double> ACRANSAC(const Kernel &kernel,
 
   // Initialize the NFA computation interface
   // (quantified NFA computation is used if a valid upper bound is provided)
-  acrancac_nfa_internal::NFA_Interface<Kernel> nfa_interface
+  acransac_nfa_internal::NFA_Interface<Kernel> nfa_interface
     (kernel, maxThreshold, (precision!=std::numeric_limits<double>::infinity()));
 
   // Output parameters
