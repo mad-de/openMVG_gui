@@ -9,7 +9,7 @@
 int desc_pres_standard = 1;
 QString str_desc_pres_standard = "HIGH";
 int PipelineSel_standard = 0;
-QString mvs_suffix_standard = "_global";"
+QString mvs_suffix_standard = "_incremental";"
 int matrix_filter_standard = 1;
 QString str_matrix_filter_standard = "f";
 
