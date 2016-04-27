@@ -9,6 +9,7 @@
 int desc_pres_standard = 1;
 QString str_desc_pres_standard = "HIGH";
 int PipelineSel_standard = 0;
+QString mvs_suffix_standard = "_global";"
 int matrix_filter_standard = 1;
 QString str_matrix_filter_standard = "f";
 
@@ -837,7 +838,7 @@ void PipelinePage::showEvent(QShowEvent*)
     QString input_dir_path = field("Comp_Features_InputPath").toString();
     QString output_dir = field("Comp_features_OutputPath").toString();
     QString output_dir_cut = field("Comp_features_OutputPath").toString().mid(0, field("Comp_features_OutputPath").toString().length()-1);
-    QString mvs_dir = output_dir_cut.mid(0, output_dir_cut.lastIndexOf("/")) + "/reconstruction_global/";
+    QString mvs_dir = output_dir_cut.mid(0, output_dir_cut.lastIndexOf("/")) + "/reconstruction" + mvs_suffix_standard +  "/";
 
     QString str_commando;
     str_commando = command->text();
