@@ -21,7 +21,7 @@ sudo make install
 cd ..
 
 #CMVS / PMVS (Optional)
-git clone https://github.com/mad-de/CMVS-PMVS.git --branch cout
+git clone https://github.com/pmoulon/CMVS-PMVS.git
 mkdir CMVS-PMVS_build && cd CMVS-PMVS_build
 cmake ../CMVS-PMVS/program
 make
