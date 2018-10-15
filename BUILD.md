@@ -10,7 +10,7 @@ main_path=`pwd`
 sudo apt-get -y install libcgal-qt5-dev`
 
 #VCGLib (Required)
-svn checkout svn://svn.code.sf.net/p/vcg/code/trunk/vcglib vcglib
+git clone https://github.com/cnr-isti-vclab/vcglib vcglib
 
 #Ceres (Required)
 git clone https://ceres-solver.googlesource.com/ceres-solver ceres-solver
